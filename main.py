@@ -1,10 +1,15 @@
 import sqlite3
-
+import dnpcsql.parsl
 
 def main() -> None:
     print("dnpcsql parsl importer")
 
     connection = init_sql()
+
+    dnpcsql.parsl.import_all(connection)
+
+    connection.commit()
+    connection.close()
 
 
 def init_sql() -> sqlite3.Connection:
@@ -26,6 +31,7 @@ def create_tables(db: sqlite3.Connection) -> None:
     cursor = db.cursor()
     cursor.execute("CREATE TABLE IF NOT EXISTS span ("
                    "uuid TEXT PRIMARY KEY,"
+                   "type TEXT NOT NULL,"  # domain style
                    "note TEXT"
                    ")")
 
@@ -34,7 +40,9 @@ def create_tables(db: sqlite3.Connection) -> None:
     cursor.execute("CREATE TABLE IF NOT EXISTS event ("
                    "uuid TEXT PRIMARY KEY,"
                    "span_uuid TEXT REFERENCES span (uuid),"
-                   "human TEXT"
+                   "time TEXT NOT NULL,"
+                   "type TEXT NOT NULL,"  # meaning comes from span.type
+                   "note TEXT"
                    ")")
 
     # spans can be contained, DAG-style, within other spans.
