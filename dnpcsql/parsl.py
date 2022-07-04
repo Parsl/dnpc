@@ -83,18 +83,27 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         
         task_rows = list(monitoring_cursor.execute("SELECT task_id, task_time_invoked, task_time_returned FROM task WHERE run_id = ?", (run_id,)))
         for task_row in task_rows:
-            print(f"Importing task {task_row[0]}")
+            print(f"  Importing task {task_row[0]}")
             task_uuid = str(uuid.uuid4())
             dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (task_uuid, 'parsl.task', 'Task from parsl monitoring.db'))
 
             dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (run_id, task_uuid, task_row[0]))
 
-            # TODO add task_time_{invoked,returned} as events
             invoked_uuid = str(uuid.uuid4())
             dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (invoked_uuid, task_uuid, row[1], 'invoked', 'Task invoked in parsl monitoring.db'))
 
             returned_uuid = str(uuid.uuid4())
             dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (returned_uuid, task_uuid, row[2], 'returned', 'Task returned in parsl monitoring.db'))
-            # TODO: import tries, and make events for each try from the status table
+
+            
+            try_rows = list(monitoring_cursor.execute("SELECT try_id FROM try WHERE run_id = ? AND task_id = ?", (run_id, task_row[0])))
+            for try_row in try_rows:
+                print(f"    Importing try {try_row[0]}")
+                try_uuid = str(uuid.uuid4())
+                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (try_uuid, 'parsl.try', 'Try from parsl monitoring.db'))
+
+                dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (task_uuid, try_uuid, try_row[0]))
+
+            # try table has timings, status table also has relevant timings... how to represent?
 
             dnpc_db.commit()
