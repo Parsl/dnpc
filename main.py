@@ -54,8 +54,8 @@ def create_tables(db: sqlite3.Connection) -> None:
     cursor.execute("CREATE TABLE IF NOT EXISTS subspan ("
                    "superspan_uuid TEXT REFERENCES span(uuid),"
                    "subspan_uuid TEXT REFERENCES span (uuid),"
-                   "key TEXT,"
-                   "human TEXT"
+                   "key TEXT NOT NULL,"
+                   "note TEXT"
                    ")")
 
 if __name__ == "__main__":

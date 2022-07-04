@@ -42,7 +42,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
     monitoring_cursor = monitoring_db.cursor()
     dnpc_cursor = dnpc_db.cursor()
 
-    rows = monitoring_cursor.execute("SELECT run_id, time_began, time_completed FROM workflow")
+    rows = list(monitoring_cursor.execute("SELECT run_id, time_began, time_completed FROM workflow"))
 
     for row in rows:
         run_id = row[0]
@@ -69,3 +69,32 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
         dnpc_db.commit()
 
+        # under a workflow there are multiple hierarchies:
+        # task -> try
+        #    and there are multiple state transition representations here:
+        #    the status table, and the several task/try table timestamp columns
+        #    What's the best way to reconcile this?
+        # executor -> task (-> try)
+        # executor -> block -> try  # note that tasks aren't assigned to a block -- tries are.
+
+        # the one most obviously represented by the key structure of the parsl
+        # monitoring db is task->try
+
+        
+        task_rows = list(monitoring_cursor.execute("SELECT task_id, task_time_invoked, task_time_returned FROM task WHERE run_id = ?", (run_id,)))
+        for task_row in task_rows:
+            print(f"Importing task {task_row[0]}")
+            task_uuid = str(uuid.uuid4())
+            dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (task_uuid, 'parsl.task', 'Task from parsl monitoring.db'))
+
+            dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (run_id, task_uuid, task_row[0]))
+
+            # TODO add task_time_{invoked,returned} as events
+            invoked_uuid = str(uuid.uuid4())
+            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (invoked_uuid, task_uuid, row[1], 'invoked', 'Task invoked in parsl monitoring.db'))
+
+            returned_uuid = str(uuid.uuid4())
+            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (returned_uuid, task_uuid, row[2], 'returned', 'Task returned in parsl monitoring.db'))
+            # TODO: import tries, and make events for each try from the status table
+
+            dnpc_db.commit()
