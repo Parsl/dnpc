@@ -90,11 +90,11 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (run_id, task_uuid, task_row[0]))
 
             invoked_uuid = str(uuid.uuid4())
-            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (invoked_uuid, task_uuid, row[1], 'invoked', 'Task invoked in parsl monitoring.db'))
+            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (invoked_uuid, task_uuid, task_row[1], 'invoked', 'Task invoked in parsl monitoring.db'))
 
-            returned_uuid = str(uuid.uuid4())
-            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (returned_uuid, task_uuid, row[2], 'returned', 'Task returned in parsl monitoring.db'))
-
+            if task_row[2]:
+                returned_uuid = str(uuid.uuid4())
+                dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (returned_uuid, task_uuid, task_row[2], 'returned', 'Task returned in parsl monitoring.db'))
             
             try_rows = list(monitoring_cursor.execute("SELECT try_id FROM try WHERE run_id = ? AND task_id = ?", (run_id, task_row[0])))
             for try_row in try_rows:
@@ -103,6 +103,12 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (try_uuid, 'parsl.try', 'Try from parsl monitoring.db'))
 
                 dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (task_uuid, try_uuid, try_row[0]))
+
+                status_rows = list(monitoring_cursor.execute("SELECT task_status_name, timestamp FROM status WHERE run_id = ? AND task_id = ? AND try_id = ?", (run_id, task_row[0], try_row[0])))
+                for status_row in status_rows:
+                    print(f"      Importing status {status_row[0]} at {status_row[1]}")
+                    status_uuid = str(uuid.uuid4())
+                    dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (status_uuid, try_uuid, status_row[1], status_row[0], 'Status in parsl monitoring.db'))
 
             # try table has timings, status table also has relevant timings... how to represent?
 
