@@ -2,7 +2,12 @@ import re
 import sqlite3
 import uuid
 
-def import_all(db: sqlite3.Connection):
+def import_all(db: sqlite3.Connection, transaction_log_path):
+    """Imports tasks from transaction_log and returns a dict that maps
+    from work queue task numbers to the relevant task spans, with the
+    intention that this be used by integrating pieces to tie wq tasks
+    into containing spans.
+    """
     print("importing from work queue")
 
     # TODO: how should we discover these paths?
@@ -15,15 +20,13 @@ def import_all(db: sqlite3.Connection):
     # moment, but this will need to happen somehow to eg tie into the
     # relevant parsl-level task spans)
 
-    filename = "/home/benc/parsl/src/parsl/runinfo/134/WorkQueueExecutor/transaction_log"
-
     cre = re.compile('([0-9]+) [0-9]+ TASK ([0-9]+) ([^ ]+) .*')
 
     task_to_span_map = {}
 
     cursor = db.cursor()
 
-    with open(filename, "r") as logfile:
+    with open(transaction_log_path, "r") as logfile:
         for line in logfile:
             print(line)
             m = cre.match(line)
@@ -50,4 +53,4 @@ def import_all(db: sqlite3.Connection):
  
     db.commit() 
     print("done importing from work_queue")
-
+    return task_to_span_map

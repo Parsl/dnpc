@@ -8,7 +8,6 @@ def main() -> None:
     connection = init_sql()
 
     dnpcsql.parsl.import_all(connection)
-    dnpcsql.workqueue.import_all(connection)
 
     connection.commit()
     connection.close()

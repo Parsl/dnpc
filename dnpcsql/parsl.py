@@ -1,5 +1,9 @@
+import os
+import re
 import sqlite3
 import uuid
+
+import dnpcsql.workqueue
 
 # There are multiple parsl data sources.
 # The big ones are:
@@ -80,6 +84,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         # the one most obviously represented by the key structure of the parsl
         # monitoring db is task->try
 
+        task_try_to_uuid = {}
         
         task_rows = list(monitoring_cursor.execute("SELECT task_id, task_time_invoked, task_time_returned FROM task WHERE run_id = ?", (run_id,)))
         for task_row in task_rows:
@@ -110,6 +115,82 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                     status_uuid = str(uuid.uuid4())
                     dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (status_uuid, try_uuid, status_row[1], status_row[0], 'Status in parsl monitoring.db'))
 
+                # store (task,try) -> try span uuid mapping for use later
+                task_try_to_uuid[(task_row[0], try_row[0])] = try_uuid
+
             # try table has timings, status table also has relevant timings... how to represent?
 
+            dnpc_db.commit()
+
+        # now we've imported a workflow from the monitoring DB
+        # is there related stuff to import?
+        # For now, that is just work queue task information, but this would
+        # also be the place to import 
+        # How can we tell when an executor has workqueue stuff to import?
+        # Let's assume that if there is a nnn/*/transaction_log file, then
+        # it should be imported.
+
+        rows = list(monitoring_cursor.execute("SELECT rundir FROM workflow WHERE run_id == ?", (run_id,)))
+        assert len(rows) == 1
+
+        rundir = rows[0][0]
+
+        print(f"(task,try)->uuid mappings are: {task_try_to_uuid}")
+
+        print(f"Checking for Work Queue logs in rundir {rundir}")
+
+        # TODO: this WorkQueue substring is hardcoded here to align with the
+        # executor name used in the test suite. What should happen is that
+        # each subdirectory is examined (or each executor-named subdirectory
+        # from the database)
+
+        executor_label = "WorkQueueExecutor"
+
+        wq_tl_filename = f"{rundir}/{executor_label}/transaction_log"
+        print(f"looking for: {wq_tl_filename}")
+        if os.path.exists(wq_tl_filename):
+            re1 = re.compile('.* Parsl task (.*) try (.*) launched on executor (.*) with executor id (.*)')
+            re2 = re.compile('.* Task ([0-9]+) submitted to WorkQueue with id ([0-9]+).*')
+
+            wq_task_bindings = dnpcsql.workqueue.import_all(dnpc_db, wq_tl_filename)
+
+            # now (via the wq executor task id) bind these together.
+            # perhaps it would simplify things to make the in-parsl
+            # presentation of these three IDs nicer, for example, by placing
+            # the end work queue TASK id into the monitoring database,
+            # but this immediate work is to deal with what is already there.
+
+            # I'll also need something to map parsl task/try IDs to span IDs
+            # to specify the other end of the subspan relationship - eg by
+            # collecting that information as we go along above.
+
+            task_try_to_wqe = {}
+            wqe_to_wq = {}
+            parsl_log_filename = f"{rundir}/parsl.log"
+            with open(parsl_log_filename, "r") as parsl_log:
+                for parsl_log_line in parsl_log:
+                    print(parsl_log_line)
+                    m = re1.match(parsl_log_line)
+                    if m and m[3] == executor_label:
+                        task_try_id = (int(m[1]), int(m[2]))
+                        wqe_id = m[4]
+                        task_try_to_wqe[task_try_id] = wqe_id
+                    m = re2.match(parsl_log_line)
+                    if m:
+                        wqe_id = m[1]
+                        wq_id = m[2]
+                        wqe_to_wq[wqe_id] = wq_id
+
+            print(f"task_try_to_wqe: {task_try_to_wqe}")
+            print(f"wqe_to_wq: {wqe_to_wq}")
+
+            for (task_try_id, wqe_id) in task_try_to_wqe.items():
+                try_span_uuid = task_try_to_uuid[task_try_id]
+                wq_span_uuid = wq_task_bindings[wqe_to_wq[task_try_to_wqe[task_try_id]]]
+                print(f"map try span {try_span_uuid} to wq task span {wq_span_uuid}")
+
+                # make a subspan relation that makes the wq task span
+                # a subspan of the try
+
+                dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (try_span_uuid, wq_span_uuid, "parsl.executors.wq.task"))
             dnpc_db.commit()
