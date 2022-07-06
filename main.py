@@ -1,5 +1,6 @@
 import sqlite3
 import dnpcsql.parsl
+import dnpcsql.workqueue
 
 def main() -> None:
     print("dnpcsql parsl importer")
@@ -7,6 +8,7 @@ def main() -> None:
     connection = init_sql()
 
     dnpcsql.parsl.import_all(connection)
+    dnpcsql.workqueue.import_all(connection)
 
     connection.commit()
     connection.close()
