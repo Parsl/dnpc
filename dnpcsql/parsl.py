@@ -1,3 +1,4 @@
+import datetime
 import os
 import re
 import sqlite3
@@ -65,11 +66,13 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (run_id, 'parsl.workflow', 'Workflow from parsl monitoring.db'))
 
         start_uuid = str(uuid.uuid4())
-        dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (start_uuid, run_id, row[1], 'began', 'Start of workflow from parsl monitoring.db'))
+        start_time = db_time_to_unix(row[1])
+        dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (start_uuid, run_id, start_time, 'began', 'Start of workflow from parsl monitoring.db'))
 
         if row[2]:  # non-null end time
             end_uuid = str(uuid.uuid4())
-            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (end_uuid, run_id, row[2], 'completed', 'End of workflow from parsl monitoring.db'))
+            end_time = db_time_to_unix(row[2])
+            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (end_uuid, run_id, end_time, 'completed', 'End of workflow from parsl monitoring.db'))
 
         dnpc_db.commit()
 
@@ -95,11 +98,13 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (run_id, task_uuid, task_row[0]))
 
             invoked_uuid = str(uuid.uuid4())
-            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (invoked_uuid, task_uuid, task_row[1], 'invoked', 'Task invoked in parsl monitoring.db'))
+            invoked_time = db_time_to_unix(task_row[1])
+            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (invoked_uuid, task_uuid, invoked_time, 'invoked', 'Task invoked in parsl monitoring.db'))
 
             if task_row[2]:
                 returned_uuid = str(uuid.uuid4())
-                dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (returned_uuid, task_uuid, task_row[2], 'returned', 'Task returned in parsl monitoring.db'))
+                returned_time = db_time_to_unix(task_row[2])
+                dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (returned_uuid, task_uuid, returned_time, 'returned', 'Task returned in parsl monitoring.db'))
             
             try_rows = list(monitoring_cursor.execute("SELECT try_id FROM try WHERE run_id = ? AND task_id = ?", (run_id, task_row[0])))
             for try_row in try_rows:
@@ -113,7 +118,8 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 for status_row in status_rows:
                     print(f"      Importing status {status_row[0]} at {status_row[1]}")
                     status_uuid = str(uuid.uuid4())
-                    dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (status_uuid, try_uuid, status_row[1], status_row[0], 'Status in parsl monitoring.db'))
+                    status_time = db_time_to_unix(status_row[1])
+                    dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (status_uuid, try_uuid, status_time, status_row[0], 'Status in parsl monitoring.db'))
 
                 # store (task,try) -> try span uuid mapping for use later
                 task_try_to_uuid[(task_row[0], try_row[0])] = try_uuid
@@ -194,3 +200,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
                 dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (try_span_uuid, wq_span_uuid, "parsl.executors.wq.task"))
             dnpc_db.commit()
+
+def db_time_to_unix(s: str):
+    return datetime.datetime.fromisoformat(s).timestamp()
+

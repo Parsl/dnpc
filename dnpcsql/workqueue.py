@@ -49,7 +49,9 @@ def import_all(db: sqlite3.Connection, transaction_log_path):
                     print(f"Existing task {wq_task_id} with span {span_id}")
 
                 event_uuid = str(uuid.uuid4())
-                cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_id, m[1], m[3], 'Event from transaction_log'))
+                unix_time = float(m[1]) / 1000000.0
+
+                cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_id, unix_time, m[3], 'Event from transaction_log'))
  
     db.commit() 
     print("done importing from work_queue")
