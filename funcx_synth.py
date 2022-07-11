@@ -79,4 +79,18 @@ with open(log_filename, "r") as log:
             cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_uuid, synth_time, synth_event_type, 'progress event from submitting synthetic workload task'))
 
 
+# now we've scanned the logs, we can look at the two collections of tasks that
+# we've created and create relevant subspans to relate them.
+
+task_ids = set(list(synth_id_to_span_uuid_submit.keys())+ list(synth_id_to_span_uuid_remote.keys()))
+
+for task_id in task_ids:
+    print(f"checking for subspan relationship for task {task_id}")
+    if task_id in synth_id_to_span_uuid_submit and task_id in synth_id_to_span_uuid_remote:
+        print(f"creating subspan relationship")
+        submit_uuid = synth_id_to_span_uuid_submit[task_id]
+        remote_uuid = synth_id_to_span_uuid_remote[task_id]
+        cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (submit_uuid, remote_uuid, "remote"))
+
+
 db.commit()
