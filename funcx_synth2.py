@@ -175,3 +175,37 @@ for (funcx_task_id, events) in aws_tasks_by_id.items():
     cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (submit_uuid, span_uuid, "cloudwatch"))
 
 db.commit()
+
+
+# now import endpoint.log lines about passing result to forwarder -- we could import more endpoint log lines but for my specific problem now, this is the one i care about.
+# 1659517946.150353 2022-08-03 11:12:26 INFO MainProcess-220169 MainThread-140192181061440 funcx_endpoint.endpoint.interchange:357 _main_loop Passing result to forwarder for task 36a48120-2c9f-4ab4-8dd1-54d51128122d
+
+log_filename = "funcxsynth2/endpoint.log"
+
+with open(log_filename, "r") as log:
+
+    re_result = re.compile("^([0-9.]+) .* Passing result to forwarder for task ([0-9a-z\-]+).*$")
+
+    c = 0
+
+    for line in log:
+        print(f"* {line}")
+        m = re_result.match(line)
+        if m:
+            print("matched")
+            # funcx_task_id_to_cloudwatch_span_id = {}
+            event_uuid = str(uuid.uuid4())
+            funcx_task_id = m[2]
+            if funcx_task_id not in funcx_task_id_to_cloudwatch_span_id:
+                print("skipping endpoint task that is probably unrelated to this run")
+                continue
+            span_uuid = funcx_task_id_to_cloudwatch_span_id[funcx_task_id]
+            timestamp = float(m[1])
+            ep_type = "endpoint.forwarded"
+            cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_uuid, timestamp, ep_type, 'progress event from endpoint'))
+
+            c += 1
+
+    print(f"added {c} endpoint.forwarded results")
+
+db.commit()
