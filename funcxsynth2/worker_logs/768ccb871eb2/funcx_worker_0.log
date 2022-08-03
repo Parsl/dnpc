@@ -1,0 +1,8 @@
+1659517091.708178 2022-08-03 10:58:11 DEBUG MainProcess-220201 MainThread-140522501871424 funcx_endpoint.logging_config:166 setup_logging debug logging enabled
+1659517091.708443 2022-08-03 10:58:11 INFO MainProcess-220201 MainThread-140522501871424 funcx_endpoint.executors.high_throughput.funcx_worker:73 __init__ Initializing worker 0
+1659517091.708523 2022-08-03 10:58:11 INFO MainProcess-220201 MainThread-140522501871424 funcx_endpoint.executors.high_throughput.funcx_worker:74 __init__ Worker is of type: RAW
+1659517091.709132 2022-08-03 10:58:11 INFO MainProcess-220201 MainThread-140522501871424 funcx_endpoint.executors.high_throughput.funcx_worker:83 __init__ Trying to connect to : tcp://127.0.0.1:54691
+1659517091.709406 2022-08-03 10:58:11 INFO MainProcess-220201 MainThread-140522501871424 funcx_endpoint.executors.high_throughput.funcx_worker:98 start Starting worker
+1659517091.709491 2022-08-03 10:58:11 DEBUG MainProcess-220201 MainThread-140522501871424 funcx_endpoint.executors.high_throughput.funcx_worker:93 _send_registration_message Sending registration
+1659517091.709715 2022-08-03 10:58:11 DEBUG MainProcess-220201 MainThread-140522501871424 funcx_endpoint.executors.high_throughput.funcx_worker:102 start Waiting for task
+1659517150.608858 2022-08-03 10:59:10 ERROR MainProcess-220201 MainThread-140522501871424 funcx_endpoint.executors.high_throughput.funcx_worker:89 handler Signal handler called with signal 15

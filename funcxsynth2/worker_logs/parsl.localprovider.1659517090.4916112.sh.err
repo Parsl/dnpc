@@ -1,0 +1,86 @@
+1659517091.089118 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.logging_config:166 setup_logging debug logging enabled
+1659517091.089288 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:859 cli_run Python version: 3.8.10 (default, Jun 22 2022, 20:18:18) 
+[GCC 9.4.0]
+1659517091.089357 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:860 cli_run Debug logging: True
+1659517091.089408 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:861 cli_run Log dir: /root/.funcx/default/HighThroughputExecutor/worker_logs
+1659517091.089455 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:862 cli_run Manager ID: 768ccb871eb2
+1659517091.089502 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:863 cli_run Block ID: 1
+1659517091.089547 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:864 cli_run cores_per_worker: 1.0
+1659517091.089594 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:865 cli_run available_accelerators: []
+1659517091.089642 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:866 cli_run task_url: tcp://127.0.0.1:54899
+1659517091.089735 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:867 cli_run result_url: tcp://127.0.0.1:54517
+1659517091.089797 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:868 cli_run hb_period: 30
+1659517091.089844 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:869 cli_run hb_threshold: 120
+1659517091.089932 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:870 cli_run max_workers: inf
+1659517091.089993 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:871 cli_run poll_period: 10
+1659517091.090039 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:872 cli_run worker_mode: no_container
+1659517091.090085 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:873 cli_run container_cmd_options: 
+1659517091.090130 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:874 cli_run scheduler_mode: hard
+1659517091.090174 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:875 cli_run worker_type: RAW
+1659517091.090226 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:162 __init__ Manager started
+1659517091.090988 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:180 __init__ Manager connected
+1659517091.091404 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:219 __init__ Manager listening on 54691 port for incoming worker connections
+1659517091.091820 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:746 start [MANAGER] Start an initial worker with worker type RAW
+1659517091.091981 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:355 add_worker Command string :
+ funcx-worker  --debug --worker_id 0 -a 127.0.0.1 -p 54691 -t RAW --logdir=/root/.funcx/default/HighThroughputExecutor/worker_logs/768ccb871eb2 
+1659517091.092069 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:356 add_worker Mode: no_container
+1659517091.092123 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:357 add_worker Container uri: None
+1659517091.092170 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:358 add_worker Container cmd options: 
+1659517091.092216 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:359 add_worker Worker type: RAW
+1659517091.096337 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:764 start Initial workers launched
+1659517091.097118 2022-08-03 10:58:11 DEBUG MainProcess-220192 Result-Pusher-139843226806016 funcx_endpoint.executors.high_throughput.funcx_manager:678 push_results Starting thread
+1659517091.097891 2022-08-03 10:58:11 DEBUG MainProcess-220192 Status-Report-139843218413312 funcx_endpoint.executors.high_throughput.funcx_manager:657 _status_report_loop Manager status reporting loop starting
+1659517091.098391 2022-08-03 10:58:11 INFO MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:302 pull_tasks starting
+1659517091.098919 2022-08-03 10:58:11 DEBUG MainProcess-220192 Result-Pusher-139843226806016 funcx_endpoint.executors.high_throughput.funcx_manager:683 push_results push poll period: 0.01
+1659517091.099898 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:306 pull_tasks Sending registration message: b'{"parsl_v": "1.1.0", "python_v": "3.8.10", "max_worker_count": 8, "cores": 8, "mem": 29.8, "block_id": "1", "worker_type": "RAW", "os": "Linux", "hname": "amber", "dir": "/root/src/simple-synthetic-load"}'
+1659517091.111988 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7}
+1659517091.112454 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 1}
+1659517091.133458 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7}
+1659517091.133837 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 1}
+1659517091.174866 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7}
+1659517091.175235 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 1}
+1659517091.256207 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7}
+1659517091.256626 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 1}
+1659517091.417654 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7}
+1659517091.418063 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 1}
+1659517091.710745 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:578 poll_funcx_task_socket Registration received from worker:b'0' {'worker_id': '0', 'worker_type': 'RAW'}
+1659517091.711079 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:65 register_worker In register worker worker_id: b'0' type:RAW
+1659517091.711339 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517091.711489 2022-08-03 10:58:11 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517092.352972 2022-08-03 10:58:12 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517092.353527 2022-08-03 10:58:12 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517093.635828 2022-08-03 10:58:13 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517093.636210 2022-08-03 10:58:13 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517096.199673 2022-08-03 10:58:16 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517096.200056 2022-08-03 10:58:16 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517101.325929 2022-08-03 10:58:21 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517101.326289 2022-08-03 10:58:21 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517111.575100 2022-08-03 10:58:31 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517111.575543 2022-08-03 10:58:31 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517121.099771 2022-08-03 10:58:41 INFO MainProcess-220192 Status-Report-139843218413312 funcx_endpoint.executors.high_throughput.funcx_manager:664 _status_report_loop Sending status report to interchange: {}
+1659517121.101191 2022-08-03 10:58:41 INFO MainProcess-220192 Status-Report-139843218413312 funcx_endpoint.executors.high_throughput.funcx_manager:666 _status_report_loop Clearing task deltas
+1659517121.115278 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.funcx_manager:428 pull_tasks Got heartbeat from interchange
+1659517121.115689 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517121.115910 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517121.116772 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517121.117054 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517121.137966 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517121.138341 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517121.179430 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517121.179798 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517121.260752 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517121.261132 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517121.422253 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517121.422642 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517121.744103 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517121.744494 2022-08-03 10:58:41 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517122.385995 2022-08-03 10:58:42 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517122.386217 2022-08-03 10:58:42 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517123.668733 2022-08-03 10:58:43 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517123.669214 2022-08-03 10:58:43 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517126.232950 2022-08-03 10:58:46 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517126.233463 2022-08-03 10:58:46 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517131.359789 2022-08-03 10:58:51 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517131.360278 2022-08-03 10:58:51 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}
+1659517141.611565 2022-08-03 10:59:01 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:422 get_next_worker_q total_worker_type_counts: {'unused': 7, 'RAW': 1}
+1659517141.612202 2022-08-03 10:59:01 DEBUG MainProcess-220192 MainThread-139843320084288 funcx_endpoint.executors.high_throughput.worker_map:426 get_next_worker_q pending_worker_type_counts: {'RAW': 0}

@@ -209,3 +209,42 @@ with open(log_filename, "r") as log:
     print(f"added {c} endpoint.forwarded results")
 
 db.commit()
+
+# now look at importing worker logs:
+# -- there's not any completion information in the manager at the moment
+# though it would be nice to have.
+# so that layer doesn't get represented at all here.
+
+import glob
+
+re_result = re.compile("^([0-9.]+) .* execute_task task ([0-9a-z\-]+) completed.*$")
+
+# funcxsynth2/worker_logs/0739733c6b92/funcx_worker_5.log:1659518886.274163 2022-08-03 11:28:06 DEBUG MainProcess-221144 MainThread-140630889584448 funcx_endpoint.executors.high_throughput.funcx_worker:149 execute_task task fbbd7e53-b96e-4c42-924d-b7c4b309ae06 completed
+
+# need to walk the worker logs tree finding worker logs
+# that look like this: funcxsynth2/worker_logs/0739733c6b92/funcx_worker_5.log
+
+worker_log_basedir = "funcxsynth2/worker_logs"
+
+for path in glob.glob(f'{worker_log_basedir}/????????????/funcx_worker_*.log', recursive=True):
+    print(f"worker log {path}")
+
+    with open(path, "r") as log:
+
+        for line in log:
+            print(f"* {line}")
+            m = re_result.match(line)
+            if m:
+                print("match")
+                timestamp = float(m[1])
+                funcx_task_id = m[2]
+                event_uuid = str(uuid.uuid4())
+                if funcx_task_id not in funcx_task_id_to_cloudwatch_span_id:
+                    print("skipping endpoint task that is probably unrelated to this run")
+                    continue
+                span_uuid = funcx_task_id_to_cloudwatch_span_id[funcx_task_id]
+                ep_type = "worker.completed"
+                cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_uuid, timestamp, ep_type, 'progress event from worker'))
+
+
+db.commit()
