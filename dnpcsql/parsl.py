@@ -169,6 +169,9 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             # 140737354053440 parsl.executors.workqueue.executor:994 _work_queue_submit_wait INFO: Executor task 20362 submitted to Work Queue with Work Queue task id 20363
             re2 = re.compile('.* Executor task ([0-9]+) submitted to Work Queue with Work Queue task id ([0-9]+).*')
 
+            # 1668431173.633931 2022-11-14 05:06:13 WorkQueue-Submit-Process-60316 MainThread-140737354053440 parsl.executors.workqueue.executor:1007 _work_queue_submit_wait DEBUG: Completed WorkQueue task 3047, parsl executor task 3046
+            re_wq_compl = re.compile('([^ ]+) .* _work_queue_submit_wait .* Completed WorkQueue task ([0-9]+),.*$')
+
             wq_task_bindings = dnpcsql.workqueue.import_all(dnpc_db, wq_tl_filename)
 
             # now (via the wq executor task id) bind these together.
@@ -197,6 +200,15 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         wqe_id = m[1]
                         wq_id = m[2]
                         wqe_to_wq[wqe_id] = wq_id
+                    m = re_wq_compl.match(parsl_log_line)
+                    if m:
+                        # print("adding completion event to wq")
+                        e_time = m[1]
+                        wq_id = m[2]
+                        wq_span_uuid = wq_task_bindings[wq_id]
+                        e_uuid = str(uuid.uuid4())
+                        dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (e_uuid, wq_span_uuid, e_time, 'WQS_completed', 'parsl.log entry for WQ Executor submit thread observing completion'))
+                        
 
             print(f"task_try_to_wqe: {task_try_to_wqe}")
             print(f"wqe_to_wq: {wqe_to_wq}")
