@@ -2,6 +2,7 @@ import datetime
 import os
 import re
 import sqlite3
+import time
 import uuid
 
 import dnpcsql.workqueue
@@ -31,15 +32,16 @@ import dnpcsql.workqueue
 # multiple DFKs in a single parsl.log? which is actually
 # perhaps an LSST/DESC requirement)
 
-def import_all(db: sqlite3.Connection):
+def import_all(db: sqlite3.Connection, runinfo: str):
     print("importing from parsl")
 
-    import_monitoring_db(db, "/home/benc/parsl/src/parsl/runinfo/monitoring.db")
+    import_monitoring_db(db, f"{runinfo}/monitoring.db")
 
     print("done importing from parsl")
 
 def import_monitoring_db(dnpc_db, monitoring_db_name):
 
+    print(f"importing from monitoring db: {monitoring_db_name}")
     monitoring_db = sqlite3.connect(monitoring_db_name,
                                     detect_types=sqlite3.PARSE_DECLTYPES |
                                     sqlite3.PARSE_COLNAMES)
@@ -109,16 +111,20 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             try_rows = list(monitoring_cursor.execute("SELECT try_id FROM try WHERE run_id = ? AND task_id = ?", (run_id, task_row[0])))
             for try_row in try_rows:
                 print(f"    Importing try {try_row[0]}")
+                # print(f"* PRE INSERT SPAN {time.time()}")
                 try_uuid = str(uuid.uuid4())
                 dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (try_uuid, 'parsl.try', 'Try from parsl monitoring.db'))
 
+                # print(f"* PRE INSERT SUBSPAN {time.time()}")
                 dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (task_uuid, try_uuid, try_row[0]))
 
+                # print(f"* PRE SELECT STATUS {time.time()}")
                 status_rows = list(monitoring_cursor.execute("SELECT task_status_name, timestamp FROM status WHERE run_id = ? AND task_id = ? AND try_id = ?", (run_id, task_row[0], try_row[0])))
                 for status_row in status_rows:
                     print(f"      Importing status {status_row[0]} at {status_row[1]}")
                     status_uuid = str(uuid.uuid4())
                     status_time = db_time_to_unix(status_row[1])
+                    # print(f"* PRE INSERT EVENT {time.time()}")
                     dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (status_uuid, try_uuid, status_time, status_row[0], 'Status in parsl monitoring.db'))
 
                 # store (task,try) -> try span uuid mapping for use later
@@ -126,8 +132,12 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
             # try table has timings, status table also has relevant timings... how to represent?
 
-            dnpc_db.commit()
+            # print(f"* PRE COMMIT {time.time()}")
+            # dnpc_db.commit()
+            # print(f"* POST COMMIT {time.time()}")
 
+        # trying out commit at end of everything for potentially large speedup
+        dnpc_db.commit()
         # now we've imported a workflow from the monitoring DB
         # is there related stuff to import?
         # For now, that is just work queue task information, but this would
@@ -156,7 +166,8 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         print(f"looking for: {wq_tl_filename}")
         if os.path.exists(wq_tl_filename):
             re1 = re.compile('.* Parsl task (.*) try (.*) launched on executor (.*) with executor id (.*)')
-            re2 = re.compile('.* Task ([0-9]+) submitted to WorkQueue with id ([0-9]+).*')
+            # 140737354053440 parsl.executors.workqueue.executor:994 _work_queue_submit_wait INFO: Executor task 20362 submitted to Work Queue with Work Queue task id 20363
+            re2 = re.compile('.* Executor task ([0-9]+) submitted to Work Queue with Work Queue task id ([0-9]+).*')
 
             wq_task_bindings = dnpcsql.workqueue.import_all(dnpc_db, wq_tl_filename)
 
@@ -175,7 +186,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             parsl_log_filename = f"{rundir}/parsl.log"
             with open(parsl_log_filename, "r") as parsl_log:
                 for parsl_log_line in parsl_log:
-                    print(parsl_log_line)
+                    # print(parsl_log_line)
                     m = re1.match(parsl_log_line)
                     if m and m[3] == executor_label:
                         task_try_id = (int(m[1]), int(m[2]))
@@ -192,7 +203,9 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
             for (task_try_id, wqe_id) in task_try_to_wqe.items():
                 try_span_uuid = task_try_to_uuid[task_try_id]
-                wq_span_uuid = wq_task_bindings[wqe_to_wq[task_try_to_wqe[task_try_id]]]
+                wqe_id = task_try_to_wqe[task_try_id]
+                wq_id = wqe_to_wq[wqe_id]
+                wq_span_uuid = wq_task_bindings[wq_id]
                 print(f"map try span {try_span_uuid} to wq task span {wq_span_uuid}")
 
                 # make a subspan relation that makes the wq task span
