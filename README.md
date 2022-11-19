@@ -56,6 +56,23 @@ a start and end event. Often the end event will describe how the
 span ended - for example, a failure event type or successful completion
 event type.
 
+## Analysis flow
+
+An example flow for performance data looks like this:
+
+* stuff happens (that we will want to analyse the performance of) and
+events are logged in ad-hoc formats (because many components are used,
+this project cannot try to enforce a common reporting format or mechanism,
+and instead must accept data as it comes)
+
+* dnpcsql users import revelant information about spans, from various
+sources, into an sqlite3 database (so far, usually called `dnpc.sqlite3`)
+
+* users get specific data from the database using SQL queries
+
+* users use matplotlib to plot that data
+
+* users examine plots
 
 ## Install
 
