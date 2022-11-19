@@ -1,10 +1,31 @@
 #!/usr/bin/env python3
+import datetime
 import json
 import re
 import subprocess
 import time
 
+one_day = 60 * 60 * 24
+
 def get_logs(start_t, end_t):
+  print(f"Scanning from  {datetime.datetime.utcfromtimestamp(start_t).strftime('%Y-%m-%dT%H:%M:%SZ')} for {end_t - start_t} seconds")
+
+  if end_t <= start_t:
+    print("End time is earlier than start time - nothing to query")
+
+
+  if end_t - start_t > one_day:
+    print("More than one day: dividing into one day chunks without querying AWS")
+    r_start = start_t
+    r_end = r_start + one_day
+
+    if r_end > end_t:
+      get_logs(r_start, end_t)
+    else:
+      get_logs(r_start, r_end)
+      get_logs(r_end, end_t)
+
+    return
 
   #aws --profile funcx logs start-query --log-group-name /aws/containerinsights/funcx-prod/application --start-time $before --end-time $now --query-string 'fields @timestamp, @message | sort @timestamp desc | limit 10000 | filter log_processed.user_id = 34'
   cmd = ["aws",
@@ -59,7 +80,7 @@ def get_logs(start_t, end_t):
     with open(f"q-{start_t}-{end_t}-full.json", "w") as f:
       f.write(json.dumps(r2))
   else:
-    print("Some match results were not returned - making smaller queries")
+    print(f"Some match results were not returned - making {n_split} smaller queries")
     with open(f"q-{start_t}-{end_t}-partial.json", "w") as f:
       f.write(json.dumps(r2))
     n_split = (matched / 10000) * 3 # doesn't need to be int. the bigger the factor, the more queries, focused over a smaller time we will do. bigger probably = better for uneven workloads where all the interesting stuff is likely to be in one segment even as we zoom in.
@@ -72,19 +93,17 @@ def get_logs(start_t, end_t):
     
 
 
-  return r2
+  return
 
 if __name__ == "__main__":
   # default_lookback = 60 * 60 * 24 * 28 * 3 # around 3 months
   # default_lookback = 60 * 60 * 24 * 28 # around 1 month
   # default_lookback = 60 * 60 * 24 # 1 week
-  default_lookback = 60 * 20 # 20 minutes
+  default_lookback = 60 * 60 # 1 hour
 
   now = time.time()
   start = 1667678245 - default_lookback
   results = get_logs(start, now)
-
-  # print(results)
 
 if __name__ == "x__main__":
   print("infill mode")
