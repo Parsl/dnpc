@@ -81,7 +81,7 @@ if __name__ == "__main__":
   default_lookback = 60 * 20 # 20 minutes
 
   now = time.time()
-  start = 1664396117 - default_lookback
+  start = 1667678245 - default_lookback
   results = get_logs(start, now)
 
   # print(results)
