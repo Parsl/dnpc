@@ -1,0 +1,16 @@
+This directory contains code to export log records from the funcX centrally
+hosted servers and import them into an sqlite3 database for further querying.
+
+`bisecting-query.py` will make queries to the cloudwatch database and store
+the results in `*.json` files in the current directory.
+
+`importer.py` will import those JSON files into funcx.sqlite3
+
+Example queries that can be made:
+
+What is the timestamp of the most recent log entry?
+
+```
+select unixepoch(substr(json_extract(entry, "$.asctime"),1,19)) as t from awslog order by t desc limit 1;
+1668745039
+```
