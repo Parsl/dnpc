@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import datetime
 import json
+import os
 import re
 import subprocess
 import time
@@ -95,14 +96,27 @@ def get_logs(start_t, end_t):
 
   return
 
+
+def get_latest():
+  # this is a bodge to get access to the latest sqlite3 (at time of
+  # writing) because unixepoch is not in the underlying distro
+  # sqlite3 on server.
+  os.system("~/importer/sqlite-tools-linux-x86-3400000/sqlite3 funcx.sqlite3  -cmd 'select unixepoch(substr(json_extract(entry, \"$.asctime\"),1,19)) as t from awslog order by t desc limit 1;' '.exit' -noheader > time.txt")
+
+  with open("time.txt","r") as f:
+      t = int(f.readline())
+  print(f"got latest time from database: {t}")
+  return t
+
 if __name__ == "__main__":
+
   # default_lookback = 60 * 60 * 24 * 28 * 3 # around 3 months
   # default_lookback = 60 * 60 * 24 * 28 # around 1 month
   # default_lookback = 60 * 60 * 24 # 1 week
   default_lookback = 60 * 60 # 1 hour
 
   now = time.time()
-  start = 1667678245 - default_lookback
+  start = get_latest() - default_lookback
   results = get_logs(start, now)
 
 if __name__ == "x__main__":
