@@ -1,4 +1,4 @@
-import task_end_latency.twoevents as twoevents
+import dnpcsql.twoevents as twoevents
 
 
 query = """

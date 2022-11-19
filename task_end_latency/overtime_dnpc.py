@@ -1,4 +1,4 @@
-import task_end_latency.twoevents as twoevents
+import dnpcsql.twoevents as twoevents
 
 query = """
     SELECT start_event.time, end_event.time - start_event.time
