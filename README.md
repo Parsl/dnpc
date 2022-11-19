@@ -80,6 +80,28 @@ rather than a small number of pre-defined plots being made by developers
 and released to dnpcsql users. Code in the dnpcrepo around analysis
 should look more like helper code, rather than pre-packaged analyses.
 
+## Database schema
+
+Users are free to structure their database schema as they please. There are
+three different kinds of structure that have been used with dnpcsql so far:
+
+* span / event / subspan - one table represents all spans, regardless of type;
+another represents events in those spans; and a third represents
+subspan/superspan relationships. This is span/event type unaware.
+
+* Type-aware tables - eg. parsl monitoring.db, with a table for tasks, another
+table for tries, etc. Different columns in the database represent timestamps
+for different events (and other data about the types of span)
+
+* raw json log records - for example, from cloudwatch. In this model, SQL
+JSON functions are used in queries to access relevant fields at index and
+query time, rather than at import time. This leads to more complex queries,
+but also allows access of the entirety of a log record.
+
+Data in all of these forms (and other forms) can exist in the sqlite3 database
+at once, accessed with SQL queries that understand all of the forms that they
+are querying.
+
 ## Install
 
 At nersc:
