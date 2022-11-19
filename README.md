@@ -74,6 +74,12 @@ sources, into an sqlite3 database (so far, usually called `dnpc.sqlite3`)
 
 * users examine plots
 
+The query/plot/examine stages are intended to be quite dynamic, with
+users writing and modifying their own code to explore performance data,
+rather than a small number of pre-defined plots being made by developers
+and released to dnpcsql users. Code in the dnpcrepo around analysis
+should look more like helper code, rather than pre-packaged analyses.
+
 ## Install
 
 At nersc:
