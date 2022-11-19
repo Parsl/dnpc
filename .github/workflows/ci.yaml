@@ -1,0 +1,32 @@
+name: dnpcsql
+
+on:
+  push
+
+jobs:
+  main-test-suite:
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@master
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: install
+      run: |
+        pip install . flake8 mypy
+
+    - name: mypy
+      run: |
+        mypy dnpcsql/ task_end_latency/
+
+    - name: flake8
+      run: |
+        flake8 dnpcsql/ task_end_latency/
