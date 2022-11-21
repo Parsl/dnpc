@@ -23,6 +23,15 @@ are added, for example, or when closer investigation of performance
 of a particular block of code leads to ad-hoc throwaway measurements
 not intended to form part of the parsl mainline code.
 
+## Database
+
+This project emphasises using SQL/relational databases as the data model
+and storage system. It is not intended to be a different query system
+that happens to use SQL as a backend; instead, the main model should be:
+relational queries (primarily SQL) against relational data. That involves
+exposing warts on the relational model, rather than hiding them behind
+some other model.
+
 ## High level model and data flow
 
 The basic object that is being analysed is a "span". This term comes
