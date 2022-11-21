@@ -111,6 +111,25 @@ Data in all of these forms (and other forms) can exist in the sqlite3 database
 at once, accessed with SQL queries that understand all of the forms that they
 are querying.
 
+## Identifier namespaces across components
+
+Different components identify their spans differently, and with different scopes.
+
+For example, the parsl monitoring database identifies a try span, globally, with
+a three part composite key: run ID, task ID and try ID. So when joining tries to
+other tables, a three part join needs to happen.
+
+Work queue log files, however, for a particular run (the lifetime of a manager?)
+use a single integer key to identify tasks, scoped only within the life of that
+manager. There is no further attempt to give the manager a global identity in
+the same way that parsl gives runs a global run ID.
+
+This can be awkward when trying to import two data sources independently with
+the intention of joining them later: something involving surrogate keys probably
+needs to happen. For example, in the parsl case, a hierarchical import using
+some kind of surrogate key that models that certain work queue log files live
+inside the rundir of a particular identified parsl run.
+
 ## Install
 
 At nersc:
