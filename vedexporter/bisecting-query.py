@@ -84,7 +84,13 @@ def get_logs(start_t, end_t):
     print(f"Some match results were not returned - making {n_split} smaller queries")
     with open(f"q-{start_t}-{end_t}-partial.json", "w") as f:
       f.write(json.dumps(r2))
-    n_split = (matched / 10000) * 3 # doesn't need to be int. the bigger the factor, the more queries, focused over a smaller time we will do. bigger probably = better for uneven workloads where all the interesting stuff is likely to be in one segment even as we zoom in.
+    n_split = (matched / 10000) * 3
+
+    # this 3 doesn't need to be int. the bigger the factor, the more queries,
+    # focused over a smaller time we will do.
+    # bigger probably = better for uneven workloads where all the interesting
+    # stuff is likely to be in one segment even as we zoom in.
+
     t_split = (end_t - start_t) / n_split
     e = start_t
     while e <= end_t:
