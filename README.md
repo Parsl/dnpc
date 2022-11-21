@@ -130,6 +130,21 @@ needs to happen. For example, in the parsl case, a hierarchical import using
 some kind of surrogate key that models that certain work queue log files live
 inside the rundir of a particular identified parsl run.
 
+## Common analyses
+
+There are lots of common queries such as "tell me information about the
+distribution of durations between a start and end event" which can be plotted
+in (for example) matplotlib.
+
+This project should provide some helpers to make those plots, which take
+output from an arbitrary SQL query that outputs in a known format (such as one
+row for each span, with two columns: the first event and the second event).
+
+Arranging the data into these structures happens in SQL, which for many queries
+is the optimal place to do it; then plotting happens in Python around matplotlib.
+
+See dnpcsql/twoevents.py for an example of this.
+
 ## Install
 
 At nersc:
