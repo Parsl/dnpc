@@ -18,9 +18,11 @@ sequence of space delimited fields:
 import pandas as pd
 import re
 
+from typing import Dict
+
 # one dataframe for each span type (aka metric type?)
 # with dataframes added as they are discovered in the log
-metric_dataframes = {}
+metric_dataframes: Dict[str, pd.DataFrame] = {}
 
 def process_logfile(filename: str) -> None:
     metric_re = re.compile("^([0-9\.]*) .* METRIC ([^ ]*) ([^ ]*) (.*)\n$")
@@ -34,6 +36,7 @@ def process_logfile(filename: str) -> None:
                 span_type = m[2]
                 span_id = m[3]
                 metrics = m[4]
+                assert isinstance(metrics, str)
                 print(f"At {timestamp}, {span_type}/{span_id} has metrics: {metrics}")
                 metrics_split = metrics.split()
                 print(metrics_split)
@@ -45,8 +48,9 @@ def process_logfile(filename: str) -> None:
 
                 ks = ['span_id', 'timestamp']
                 vs = [span_id, timestamp]
-                for m in metrics_split:
-                    kv = m.split('=')
+                for m2 in metrics_split:
+                    assert isinstance(m, str)
+                    kv = m2.split('=')
                     assert len(kv) == 2
                     k = kv[0]
                     v = kv[1]
