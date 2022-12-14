@@ -15,12 +15,17 @@ sequence of space delimited fields:
   (deliberately, what kind of number is left ambiguous)
 """
 
+import pandas as pd
 import re
+
+# one dataframe for each span type (aka metric type?)
+# with dataframes added as they are discovered in the log
+metric_dataframes = {}
 
 def process_logfile(filename: str) -> None:
     metric_re = re.compile("^([0-9\.]*) .* METRIC ([^ ]*) ([^ ]*) (.*)\n$")
 
-    with open("/home/benc/parsl/src/parsl/runinfo/002/parsl.log") as logfile:
+    with open(filename) as logfile:
         for l in logfile:
             # print(f"** {l} <<")
             m = metric_re.match(l)
@@ -32,13 +37,33 @@ def process_logfile(filename: str) -> None:
                 print(f"At {timestamp}, {span_type}/{span_id} has metrics: {metrics}")
                 metrics_split = metrics.split()
                 print(metrics_split)
+
+                if span_type in metric_dataframes:
+                    dataframe = metric_dataframes[span_type]
+                else:
+                    dataframe = pd.DataFrame()
+
+                ks = ['span_id', 'timestamp']
+                vs = [span_id, timestamp]
                 for m in metrics_split:
-                  kv = m.split('=')
-                  assert len(kv) == 2
-                  print(f"key {kv[0]} value {kv[1]}")
+                    kv = m.split('=')
+                    assert len(kv) == 2
+                    k = kv[0]
+                    v = kv[1]
+                    print(f"key {k} value {v}")
+                    ks.append(k)
+                    vs.append(v)
+                print(ks)
+                print(vs)
+                new_df = pd.DataFrame([vs], columns=ks)
+                print(new_df)
+                dataframe = pd.concat([dataframe, new_df])
+                metric_dataframes[span_type] = dataframe
 
 if __name__ == "__main__":
     print("log metric importer")
 
-    process_logfile("/home/benc/parsl/src/parsl/runinfo/348/parsl.log")
+    process_logfile("/home/benc/parsl/src/parsl/runinfo/353/parsl.log")
 
+    print("metrics_dataframe dictionary:")
+    print(metric_dataframes)
