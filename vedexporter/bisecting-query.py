@@ -28,7 +28,11 @@ def get_logs(start_t, end_t):
 
     return
 
-  #aws --profile funcx logs start-query --log-group-name /aws/containerinsights/funcx-prod/application --start-time $before --end-time $now --query-string 'fields @timestamp, @message | sort @timestamp desc | limit 10000 | filter log_processed.user_id = 34'
+  # aws --profile funcx logs start-query
+  #     --log-group-name /aws/containerinsights/funcx-prod/application
+  #     --start-time $before
+  #     --end-time $now
+  #     --query-string 'fields @timestamp, @message | sort @timestamp desc | limit 10000 | filter log_processed.user_id = 34'
   cmd = ["aws",
          "--profile", "funcx",
          "logs", "start-query",
