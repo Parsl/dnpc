@@ -56,8 +56,8 @@ def create_tables(db: sqlite3.Connection) -> None:
                    ")")
 
     cursor.execute("create index span_uuids on event (span_uuid)")
-    cursor.execute("create index subpan_uuids on subspan (superspan_uuid)")
-    cursor.execute("create index subpan_uuids2 on subspan (subspan_uuid)")
+    cursor.execute("create index subspan_uuids_super on subspan (superspan_uuid)")
+    cursor.execute("create index subspan_uuids_sub on subspan (subspan_uuid)")
 
 if __name__ == "__main__":
      main()
