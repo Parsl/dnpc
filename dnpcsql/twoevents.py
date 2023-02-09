@@ -23,7 +23,6 @@ def get_data(query):
     cursor = db.cursor()
 
     rows = list(cursor.execute(query))
-    assert len(rows) == 32000
 
     print(f"there are {len(rows)} relevant status transitions in the db")
 
