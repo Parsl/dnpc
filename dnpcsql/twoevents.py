@@ -58,7 +58,7 @@ def plot_histo(ydata, output_filename):
     ax.axvline(np.percentile(ydata, 100), linestyle='dashed', linewidth=1, label="maximum", color = "#FF4400")
     ax.legend()
 
-    plt.xlabel("seconds between start,end")
+    plt.xlabel("duration/s")
     plt.ylabel("number of tasks in bin")
 
     plt.savefig(output_filename)
