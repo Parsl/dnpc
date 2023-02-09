@@ -1,13 +1,16 @@
 import sqlite3
 import dnpcsql.parsl
 import dnpcsql.workqueue
+from dnpcsql.schema import create_tables
 
 def main() -> None:
     print("dnpcsql parsl importer")
 
     connection = init_sql()
 
-    dnpcsql.parsl.import_all(connection)
+    create_tables(connection)
+
+    dnpcsql.parsl.import_all(connection, runinfo="/home/benc/parsl/src/parsl/runinfo/")
 
     connection.commit()
     connection.close()
