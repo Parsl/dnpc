@@ -5,8 +5,8 @@ import sqlalchemy
 import sqlite3
 
 def plot(query, output_filename):
-    """Given an SQL query that returns two columns of timestamps representing
-    the start and end of something (for example the start and end time of a
+    """Given an SQL query that returns two columns: a start time, and a
+    duration, of something (for example the start time and duration of a
     task, plot various graphs about those periods.
     """
     xdata, ydata = get_data(query)
@@ -25,6 +25,7 @@ def get_data(query):
     rows = list(cursor.execute(query))
 
     print(f"there are {len(rows)} relevant status transitions in the db")
+    print(f"First row: {rows[0]}")
 
     xdata = np.array([float(x) for (x,y) in rows])
     xdata = xdata - xdata.min()
