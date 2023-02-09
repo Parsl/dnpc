@@ -167,7 +167,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         if os.path.exists(wq_tl_filename):
             re1 = re.compile('.* Parsl task (.*) try (.*) launched on executor (.*) with executor id (.*)')
             # 140737354053440 parsl.executors.workqueue.executor:994 _work_queue_submit_wait INFO: Executor task 20362 submitted to Work Queue with Work Queue task id 20363
-            re2 = re.compile('.* Executor task ([0-9]+) submitted to Work Queue with Work Queue task id ([0-9]+).*')
+            re_wqe_to_wq = re.compile('.* Executor task ([0-9]+) submitted to Work Queue with Work Queue task id ([0-9]+).*')
 
             # 1668431173.633931 2022-11-14 05:06:13 WorkQueue-Submit-Process-60316 MainThread-140737354053440 parsl.executors.workqueue.executor:1007 _work_queue_submit_wait DEBUG: Completed WorkQueue task 3047, parsl executor task 3046
             re_wq_compl = re.compile('([^ ]+) .* _work_queue_submit_wait .* Completed WorkQueue task ([0-9]+),.*$')
@@ -195,7 +195,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         task_try_id = (int(m[1]), int(m[2]))
                         wqe_id = m[4]
                         task_try_to_wqe[task_try_id] = wqe_id
-                    m = re2.match(parsl_log_line)
+                    m = re_wqe_to_wq.match(parsl_log_line)
                     if m:
                         wqe_id = m[1]
                         wq_id = m[2]
@@ -214,6 +214,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             print(f"wqe_to_wq: {wqe_to_wq}")
 
             for (task_try_id, wqe_id) in task_try_to_wqe.items():
+                print(f"pairing task_try_id {task_try_id} to Work Queue Executor task id {wqe_id}")
                 try_span_uuid = task_try_to_uuid[task_try_id]
                 wqe_id = task_try_to_wqe[task_try_id]
                 wq_id = wqe_to_wq[wqe_id]
