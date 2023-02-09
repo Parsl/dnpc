@@ -5,6 +5,10 @@ import sqlalchemy
 import sqlite3
 
 def plot(query, output_filename):
+    """Given an SQL query that returns two columns of timestamps representing
+    the start and end of something (for example the start and end time of a
+    task, plot various graphs about those periods.
+    """
     xdata, ydata = get_data(query)
     plot_by_time(xdata, ydata, output_filename)
     plot_kde(xdata, ydata, "kde-"+output_filename)
