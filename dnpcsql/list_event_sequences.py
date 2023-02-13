@@ -8,7 +8,21 @@ import sqlite3
 if __name__ == "__main__":
 
     query = """
-with recursive descs(root_span_uuid, span_uuid) as (select span.uuid, span.uuid from span where span.type="parsl.task" union select descs.root_span_uuid, subspan.subspan_uuid from subspan, descs where subspan.superspan_uuid = descs.span_uuid) select descs.root_span_uuid, event.time, span.type, event.type from descs, span, event where span.uuid = descs.span_uuid and event.span_uuid = span.uuid order by root_span_uuid, event.time;
+with recursive
+
+  descs(root_span_uuid, span_uuid) as (
+    select span.uuid, span.uuid from span where span.type="parsl.task"
+    union
+    select descs.root_span_uuid, subspan.subspan_uuid
+      from subspan, descs
+     where subspan.superspan_uuid = descs.span_uuid
+  )
+
+  select descs.root_span_uuid, event.time, span.type, event.type
+    from descs, span, event
+   where span.uuid = descs.span_uuid
+     and event.span_uuid = span.uuid
+order by root_span_uuid, event.time;
     """
 
     db_name = "dnpc.sqlite3"
