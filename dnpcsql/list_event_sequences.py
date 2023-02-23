@@ -67,7 +67,7 @@ order by root_span_uuid, event.time;
 
     print(f"Most common hash: {most_common_hash}")
 
-    print(f"fExample event sequence in this most common hash:")
+    print("Example event sequence in this most common hash:")
 
     assert len(hash_sequences[most_common_hash]) == most_common_count
     example_events = hash_sequences[most_common_hash][0]
