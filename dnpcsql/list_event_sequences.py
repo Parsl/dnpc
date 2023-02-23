@@ -37,7 +37,7 @@ order by root_span_uuid, event.time;
     groups = itertools.groupby(rows, lambda r: r[0])
 
     hash_counts = {}
-    hash_example = {}
+    hash_sequences = {}
 
     for (root_span_uuid, events) in groups:
       events = list(events)
@@ -53,8 +53,9 @@ order by root_span_uuid, event.time;
       print(f"hash of this sequence: {h}")
       if h not in hash_counts:
           hash_counts[h] = 0
-          hash_example[h] = events
+          hash_sequences[h] = []
       hash_counts[h] += 1
+      hash_sequences[h].append(events)
       print("=====")
     print(f"There were {len(hash_counts)} different orderings of events:")
     print(hash_counts)
@@ -66,12 +67,39 @@ order by root_span_uuid, event.time;
 
     print(f"Most common hash: {most_common_hash}")
 
-    print(f"fEvent sequence in this most common hash:")
+    print(f"fExample event sequence in this most common hash:")
 
-    events = hash_example[most_common_hash]
+    assert len(hash_sequences[most_common_hash]) == most_common_count
+    example_events = hash_sequences[most_common_hash][0]
 
-    for e in events:
+    # for each event in sequence, store cumulative time to next
+    # no need to store count, as it should be constant most_common_count
+    template_events = []
+
+    for e in example_events:
       event_time=e[1]
       span_type=e[2]
       event_type=e[3]
-      print(f"  {event_time} {span_type}/{event_type}")
+      print(f"Template event:  {event_time} {span_type}/{event_type}")
+      template_events.append(0)
+
+    for s in hash_sequences[most_common_hash]:
+      last_time = float(s[0][1])
+      n = 0
+      for e in s:
+        event_time = float(e[1])
+        time_since_last = event_time - last_time
+        template_events[n] += time_since_last
+        last_time = event_time
+        n += 1
+
+    n=0
+    for e in example_events:
+      event_time=e[1]
+      span_type=e[2]
+      event_type=e[3]
+      cumul_time = template_events[n] / most_common_count
+      print(f"Mean time since prev.:  {cumul_time} {span_type}/{event_type}")
+      n += 1
+
+
