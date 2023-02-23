@@ -99,7 +99,8 @@ order by root_span_uuid, event.time;
       span_type=e[2]
       event_type=e[3]
       cumul_time = template_events[n] / most_common_count
-      print(f"Mean time since prev.:  {cumul_time} {span_type}/{event_type}")
+      cumul_time_formatted = "{:15.9f}".format(cumul_time)
+      print(f"Mean time since prev.:  {cumul_time_formatted} {span_type}/{event_type}")
       n += 1
 
 
