@@ -93,14 +93,20 @@ order by root_span_uuid, event.time;
         last_time = event_time
         n += 1
 
+    print("Mean times for most common event sequence (cumul, inter-event)")
     n=0
+    c=0
     for e in example_events:
       event_time=e[1]
       span_type=e[2]
       event_type=e[3]
-      cumul_time = template_events[n] / most_common_count
-      cumul_time_formatted = "{:15.9f}".format(cumul_time)
-      print(f"Mean time since prev.:  {cumul_time_formatted} {span_type}/{event_type}")
+      inter_time = template_events[n] / most_common_count
+      c += inter_time
+
+      inter_time_formatted = "{:15.9f}".format(inter_time)
+      cumul_time_formatted = "{:15.9f}".format(c)
+
+      print(f"{cumul_time_formatted} {inter_time_formatted} {span_type}/{event_type}")
       n += 1
 
 
