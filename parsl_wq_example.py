@@ -28,7 +28,7 @@ def main() -> None:
         and event_end.type="returned";
     """
 
-    twoev.plot(parsl_task_invoked_to_returned, "parsl-task-durations")
+    twoev.plot(parsl_task_invoked_to_returned, "parsl-task-durations", "parsl app invoked", "parsl app returned")
 
 
 def init_sql() -> sqlite3.Connection:

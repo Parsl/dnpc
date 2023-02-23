@@ -4,15 +4,15 @@ import scipy.stats
 import sqlalchemy
 import sqlite3
 
-def plot(query, output_filename):
+def plot(query, output_filename, start_name, end_name):
     """Given an SQL query that returns two columns: a start time, and a
     duration, of something (for example the start time and duration of a
     task, plot various graphs about those periods.
     """
     xdata, ydata = get_data(query)
-    plot_by_time(xdata, ydata, output_filename)
-    plot_kde(xdata, ydata, "kde-"+output_filename)
-    plot_histo(ydata, "histo-"+output_filename)
+    plot_by_time(xdata, ydata, output_filename, start_name, end_name)
+    plot_kde(xdata, ydata, "kde-"+output_filename, start_name, end_name)
+    plot_histo(ydata, "histo-"+output_filename, start_name, end_name)
 
 def get_data(query):
     db_name = "./dnpc.sqlite3"
@@ -35,19 +35,19 @@ def get_data(query):
     return xdata, ydata
 
 
-def plot_by_time(xdata, ydata, output_filename):
+def plot_by_time(xdata, ydata, output_filename, start_name, end_name):
 
     fig, ax = plt.subplots()
 
     # ax.hist(durations_running_ended_exec_done, bins=100, color="#0000FF")
     ax.scatter(x=xdata, y=ydata, s=1)
 
-    plt.xlabel("clock time of end event")
-    plt.ylabel("s taken between events")
+    plt.xlabel(f"clock time of end event ({end_name})")
+    plt.ylabel(f"s taken between events ({start_name} to {end_name}")
 
     plt.savefig(output_filename)
 
-def plot_histo(ydata, output_filename):
+def plot_histo(ydata, output_filename, start_name, end_name):
 
     fig, ax = plt.subplots()
 
@@ -58,12 +58,12 @@ def plot_histo(ydata, output_filename):
     ax.axvline(np.percentile(ydata, 100), linestyle='dashed', linewidth=1, label="maximum", color = "#FF4400")
     ax.legend()
 
-    plt.xlabel("duration/s")
+    plt.xlabel(f"duration (s) between {start_name} and {end_name}")
     plt.ylabel("number of tasks in bin")
 
     plt.savefig(output_filename)
 
-def plot_kde(xdata, ydata, output_filename):
+def plot_kde(xdata, ydata, output_filename, start_name, end_name):
     """
     Credit to:
     https://www.python-graph-gallery.com/85-density-plot-with-matplotlib
