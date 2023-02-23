@@ -37,8 +37,10 @@ order by root_span_uuid, event.time;
     groups = itertools.groupby(rows, lambda r: r[0])
 
     hash_counts = {}
+    hash_example = {}
 
     for (root_span_uuid, events) in groups:
+      events = list(events)
       hash_material = ""
       print(f"Root span uuid {root_span_uuid}:")
       for e in events:
@@ -51,7 +53,25 @@ order by root_span_uuid, event.time;
       print(f"hash of this sequence: {h}")
       if h not in hash_counts:
           hash_counts[h] = 0
+          hash_example[h] = events
       hash_counts[h] += 1
       print("=====")
     print(f"There were {len(hash_counts)} different orderings of events:")
     print(hash_counts)
+
+    most_common_count = max(hash_counts.values())
+    print(f"Most common count: {most_common_count}")
+
+    most_common_hash = [k for k in hash_counts.keys() if hash_counts[k] == most_common_count][0]
+
+    print(f"Most common hash: {most_common_hash}")
+
+    print(f"fEvent sequence in this most common hash:")
+
+    events = hash_example[most_common_hash]
+
+    for e in events:
+      event_time=e[1]
+      span_type=e[2]
+      event_type=e[3]
+      print(f"  {event_time} {span_type}/{event_type}")
