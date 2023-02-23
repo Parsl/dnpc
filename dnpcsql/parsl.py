@@ -227,6 +227,39 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (try_span_uuid, wq_span_uuid, "parsl.executors.wq.task"))
             dnpc_db.commit()
 
+            # 1677161346.713548 META_PATH parsl.tests.test_regression.test_2555
+            re_parsl_wq_task_log = re.compile('^([0-9.]+) (.*)$')
+            # now look at importing parsl wq inside-executor loading logs
+            for wqe_id in wqe_to_wq.keys():
+                print(f"Looking for inside-executor loading logs for executor task ID {wqe_id}")
+                task_dir = "{:04d}".format(int(wqe_id))
+
+                function_log_filename = f"{rundir}/{executor_label}/function_data/{task_dir}/log"
+                print(f"Filename: {function_log_filename}")
+                if os.path.exists(function_log_filename):
+                    print("WQ task log file exists")
+                    wqe_task_log_span_uuid = str(uuid.uuid4())
+                    dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (wqe_task_log_span_uuid, 'parsl.wq.remote', 'parsl+wq executor'))
+
+                    with open(function_log_filename, "r") as f:
+                      for log_line in f.readlines():
+                        print(log_line)
+                        m = re_parsl_wq_task_log.match(log_line.strip())
+                        if m:
+                          print("Match")
+                          event_time=m[1]
+                          event_type=m[2]
+                          if event_type.startswith("META_PATH "):
+                            continue
+                          event_uuid = str(uuid.uuid4())
+                          dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, wqe_task_log_span_uuid, event_time, event_type, 'parsl wq remote task log entry'))
+
+                    wq_id = wqe_to_wq[wqe_id]
+                    wq_span_uuid = wq_task_bindings[wq_id]
+                    dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (wq_span_uuid, wqe_task_log_span_uuid, "parsl.executors.wq.task.remote"))
+
+            dnpc_db.commit()
+
 def db_time_to_unix(s: str):
     return datetime.datetime.fromisoformat(s).timestamp()
 
