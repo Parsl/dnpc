@@ -59,5 +59,12 @@ def create_tables(db: sqlite3.Connection) -> None:
     cursor.execute("create index subspan_uuids_super on subspan (superspan_uuid)")
     cursor.execute("create index subspan_uuids_sub on subspan (subspan_uuid)")
 
+    cursor.execute("CREATE TABLE IF NOT EXISTS facet ("
+                   "left_uuid TEXT REFERENCES span(uuid),"
+                   "right_uuid TEXT REFERENCES span (uuid),"
+                   "note TEXT"
+                   ")")
+
+
 if __name__ == "__main__":
      main()
