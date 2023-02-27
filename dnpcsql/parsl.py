@@ -260,79 +260,78 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
             dnpc_db.commit()
 
-            # Now import pickled event stats from parsl_tracing.pickle which is
-            # a DESC-branch specific development.
-            # Right now there isn't enough info to tie such a pickle file into
-            # particular workflow: that's because there is a conflation between
-            # a Python process and a DFK (aka workflow) instance, with a lot
-            # of parsl code not being aware of how it is associated with a
-            # particular DFK.
-            # so this code will have to make some assumptions.
+        # Now import pickled event stats from parsl_tracing.pickle which is
+        # a DESC-branch specific development.
+        # Right now there isn't enough info to tie such a pickle file into
+        # particular workflow: that's because there is a conflation between
+        # a Python process and a DFK (aka workflow) instance, with a lot
+        # of parsl code not being aware of how it is associated with a
+        # particular DFK.
+        # so this code will have to make some assumptions.
 
-            parsl_tracing_filename=f"{rundir}/parsl_tracing.pickle"
-            with open(parsl_tracing_filename, "rb") as f:
-                parsl_tracing = pickle.load(f)
+        parsl_tracing_filename=f"{rundir}/parsl_tracing.pickle"
+        with open(parsl_tracing_filename, "rb") as f:
+            parsl_tracing = pickle.load(f)
 
-            assert 'events' in parsl_tracing
-            assert 'binds' in parsl_tracing
+        assert 'events' in parsl_tracing
+        assert 'binds' in parsl_tracing
 
-            # parsl_tracing.pickle contains both events and binds between
-            # spans. The existence of spans is implict, by being mentioned
-            # either in an event or a bind, so a span cannot exist in
-            # isolation with neither events nor binds.
+        # parsl_tracing.pickle contains both events and binds between
+        # spans. The existence of spans is implict, by being mentioned
+        # either in an event or a bind, so a span cannot exist in
+        # isolation with neither events nor binds.
 
-            tracing_span_uuids = {}
+        tracing_span_uuids = {}
 
-            for e in parsl_tracing['events']:
-                event_time = e[0]
-                event_name = e[1]
-                span_type = e[2]
-                span_id = e[3]
+        for e in parsl_tracing['events']:
+            event_time = e[0]
+            event_name = e[1]
+            span_type = e[2]
+            span_id = e[3]
 
-                k = (span_type, span_id)
+            k = (span_type, span_id)
 
-                # this bit handles the implicitness of span existence in
-                # parsl_tracing
-                if k not in tracing_span_uuids:
-                    span_uuid = str(uuid.uuid4())
-                    tracing_span_uuids[k] = span_uuid
-                    db_span_type = "parsl.tracing." + span_type
-                    dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (span_uuid, db_span_type, 'imported from parsl_tracing'))
-                else:
-                    span_uuid = tracing_span_uuids[k]
+            # this bit handles the implicitness of span existence in
+            # parsl_tracing
+            if k not in tracing_span_uuids:
+                span_uuid = str(uuid.uuid4())
+                tracing_span_uuids[k] = span_uuid
+                db_span_type = "parsl.tracing." + span_type
+                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (span_uuid, db_span_type, 'imported from parsl_tracing'))
+            else:
+                span_uuid = tracing_span_uuids[k]
 
-                event_uuid = str(uuid.uuid4())
-                dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_uuid, event_time, event_type, 'imported from parsl_tracing'))
+            event_uuid = str(uuid.uuid4())
+            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_uuid, event_time, event_type, 'imported from parsl_tracing'))
 
-            for b in parsl_tracing['binds']:
-                super_type = b[0]
-                super_id = b[1]
-                sub_type = b[2]
-                sub_id = b[3]
+        for b in parsl_tracing['binds']:
+            super_type = b[0]
+            super_id = b[1]
+            sub_type = b[2]
+            sub_id = b[3]
 
-                super_k = (super_type, super_id)
-                if super_k not in tracing_span_uuids:
-                    super_uuid = str(uuid.uuid4())
-                    tracing_span_uuids[super_k] = super_uuid
-                    db_span_type = "parsl.tracing." + super_type
-                    dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (super_uuid, db_span_type, 'imported from parsl_tracing event'))
-                else:
-                    super_uuid = tracing_span_uuids[super_k]
+            super_k = (super_type, super_id)
+            if super_k not in tracing_span_uuids:
+                super_uuid = str(uuid.uuid4())
+                tracing_span_uuids[super_k] = super_uuid
+                db_span_type = "parsl.tracing." + super_type
+                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (super_uuid, db_span_type, 'imported from parsl_tracing event'))
+            else:
+                super_uuid = tracing_span_uuids[super_k]
+
+            sub_k = (sub_type, sub_id)
+            if sub_k not in tracing_span_uuids:
+                sub_uuid = str(uuid.uuid4())
+                tracing_span_uuids[super_k] = sub_uuid
+                db_span_type = "parsl.tracing." + sub_type
+                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (sub_uuid, db_span_type, 'imported from parsl_tracing bind'))
+            else:
+                sub_uuid = tracing_span_uuids[sub_k]
 
 
-                sub_k = (sub_type, sub_id)
-                if sub_k not in tracing_span_uuids:
-                    sub_uuid = str(uuid.uuid4())
-                    tracing_span_uuids[super_k] = sub_uuid
-                    db_span_type = "parsl.tracing." + sub_type
-                    dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (sub_uuid, db_span_type, 'imported from parsl_tracing bind'))
-                else:
-                    sub_uuid = tracing_span_uuids[sub_k]
+            dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (super_uuid, sub_uuid, str((sub_type, sub_id))))
 
-
-                dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (super_uuid, sub_uuid, str((sub_type, sub_id))))
-
-            dnpc_db.commit()
+        dnpc_db.commit()
 
 
 def db_time_to_unix(s: str):
