@@ -1,5 +1,6 @@
 import datetime
 import os
+import pickle
 import re
 import sqlite3
 import time
@@ -259,6 +260,48 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                     dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (wq_span_uuid, wqe_task_log_span_uuid, "parsl.executors.wq.task.remote"))
 
             dnpc_db.commit()
+
+            # Now import pickled event stats from parsl_tracing.pickle which is
+            # a DESC-branch specific development.
+            # Right now there isn't enough info to tie such a pickle file into
+            # particular workflow: that's because there is a conflation between
+            # a Python process and a DFK (aka workflow) instance, with a lot
+            # of parsl code not being aware of how it is associated with a
+            # particular DFK.
+            # so this code will have to make some assumptions.
+
+            parsl_tracing_filename=f"{rundir}/parsl_tracing.pickle"
+            with open(parsl_tracing_filename, "rb") as f:
+                parsl_tracing = pickle.load(f)
+
+            assert 'events' in parsl_tracing
+            assert 'binds' in parsl_tracing
+
+            # parsl_tracing.pickle contains both events and binds between
+            # spans. The existence of spans is implict, by being mentioned
+            # either in an event or a bind, so a span cannot exist in
+            # isolation with neither events nor binds.
+
+            tracing_span_uuids = {}
+
+            for e in parsl_tracing['events']:
+                print(f"parsl_tracing event: {e}")
+                timestamp = e[0]
+                event_name = e[1]
+                span_type = e[2]
+                span_id = e[3]
+
+                k = (span_type, span_id)
+                if k not in tracing_span_uuids:
+                    span_uuid = str(uuid.uuid4())
+                    tracing_span_uuids[k] = span_uuid
+                    db_span_type = "parsl.tracing." + span_type
+                    dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (span_uuid, db_span_type, 'imported from parsl_tracing'))
+                else:
+                    span_uuid = tracing_span_uuids[k]
+
+            dnpc_db.commit()
+
 
 def db_time_to_unix(s: str):
     return datetime.datetime.fromisoformat(s).timestamp()
