@@ -309,6 +309,34 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 event_uuid = str(uuid.uuid4())
                 dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_uuid, event_time, event_type, 'imported from parsl_tracing'))
 
+            for b in parsl_tracing['binds']:
+                super_type = b[0]
+                super_id = b[1]
+                sub_type = b[2]
+                sub_id = b[3]
+
+                super_k = (super_type, super_id)
+                if super_k not in tracing_span_uuids:
+                    super_uuid = str(uuid.uuid4())
+                    tracing_span_uuids[super_k] = super_uuid
+                    db_span_type = "parsl.tracing." + super_type
+                    dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (super_uuid, db_span_type, 'imported from parsl_tracing event'))
+                else:
+                    super_uuid = tracing_span_uuids[super_k]
+
+
+                sub_k = (sub_type, sub_id)
+                if sub_k not in tracing_span_uuids:
+                    sub_uuid = str(uuid.uuid4())
+                    tracing_span_uuids[super_k] = sub_uuid
+                    db_span_type = "parsl.tracing." + sub_type
+                    dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (sub_uuid, db_span_type, 'imported from parsl_tracing bind'))
+                else:
+                    sub_uuid = tracing_span_uuids[sub_k]
+
+
+                dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (super_uuid, sub_uuid, str((sub_type, sub_id))))
+
             dnpc_db.commit()
 
 
