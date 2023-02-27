@@ -26,7 +26,7 @@ with recursive
      where facet.right_uuid = descs.span_uuid
   )
 
-  select descs.root_span_uuid, event.time, span.type, event.type
+  select descs.root_span_uuid, event.time, span.type, event.type, event.uuid
     from descs, span, event
    where span.uuid = descs.span_uuid
      and event.span_uuid = span.uuid
@@ -88,7 +88,8 @@ order by root_span_uuid, event.time;
       event_time=e[1]
       span_type=e[2]
       event_type=e[3]
-      print(f"Template event:  {event_time} {span_type}/{event_type}")
+      event_uuid=e[4]
+      print(f"Template event:  {event_time} {span_type}/{event_type} {event_uuid}")
       template_events.append(0)
 
     for s in hash_sequences[most_common_hash]:

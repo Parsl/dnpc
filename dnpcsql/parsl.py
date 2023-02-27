@@ -90,12 +90,14 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         # the one most obviously represented by the key structure of the parsl
         # monitoring db is task->try
 
+        monitoring_task_to_uuid = {}
         task_try_to_uuid = {}
         
         task_rows = list(monitoring_cursor.execute("SELECT task_id, task_time_invoked, task_time_returned FROM task WHERE run_id = ?", (run_id,)))
         for task_row in task_rows:
             print(f"  Importing task {task_row[0]}")
             task_uuid = str(uuid.uuid4())
+            monitoring_task_to_uuid[int(task_row[0])] = task_uuid
             dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (task_uuid, 'parsl.monitoring.task', 'Task from parsl monitoring.db'))
 
             dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (run_id, task_uuid, task_row[0]))
@@ -283,6 +285,8 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
         tracing_span_uuids = {}
 
+        tracing_task_to_uuid = {}
+
         for e in parsl_tracing['events']:
             event_time = e[0]
             event_name = e[1]
@@ -298,11 +302,18 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 tracing_span_uuids[k] = span_uuid
                 db_span_type = "parsl.tracing." + span_type
                 dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (span_uuid, db_span_type, 'imported from parsl_tracing'))
+
+                # TODO: also do this for tasks added at bind level...
+                # eg by factoring out this block.
+                if span_type == "TASK":
+                    tracing_task_id = span_id
+                    print(f"Found tracing TASK with ID {tracing_task_id}")
+                    tracing_task_to_uuid[tracing_task_id] = span_uuid
             else:
                 span_uuid = tracing_span_uuids[k]
 
             event_uuid = str(uuid.uuid4())
-            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_uuid, event_time, event_type, 'imported from parsl_tracing'))
+            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_uuid, event_time, event_name, 'imported from parsl_tracing'))
 
         for b in parsl_tracing['binds']:
             super_type = b[0]
@@ -333,6 +344,27 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
         dnpc_db.commit()
 
+        # now tie together facets of the same entity from tracing and monitoring:
+        # tasks
+        # tries
+        # for a top level tasks-based analysis, it probably suffices to only tie
+        # together at the task level, but if working with tries individually,
+        # then it's probably interesting to consider tying together tries too,
+        # so that the relationship is directly expressed in the database rather
+        # than via try id numbers.
+        # I wonder if there's a more modular identifier based way of doing this,
+        # rather than collecting in-memory references? so that a SELECT->INSERT
+        # could make the entity links (i.e. the DB would already contain the
+        # relevant data in a different form?)
+
+        known_task_ids = set(list(tracing_task_to_uuid.keys()) + list(monitoring_task_to_uuid.keys()))
+        print(f"There are {len(known_task_ids)} known tasks, between monitoring and tracing") 
+        for task_id in known_task_ids:
+            if task_id in tracing_task_to_uuid and task_id in monitoring_task_to_uuid:
+                print(f"joining spans for task {task_id}")
+                dnpc_cursor.execute("INSERT INTO facet (left_uuid, right_uuid, note) VALUES (?, ?, ?)", (tracing_task_to_uuid[task_id], monitoring_task_to_uuid[task_id], "joined by importer"))
+
+        dnpc_db.commit()
 
 def db_time_to_unix(s: str):
     return datetime.datetime.fromisoformat(s).timestamp()
