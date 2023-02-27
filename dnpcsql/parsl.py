@@ -133,10 +133,6 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
             # try table has timings, status table also has relevant timings... how to represent?
 
-            # print(f"* PRE COMMIT {time.time()}")
-            # dnpc_db.commit()
-            # print(f"* POST COMMIT {time.time()}")
-
         # trying out commit at end of everything for potentially large speedup
         dnpc_db.commit()
         # now we've imported a workflow from the monitoring DB
