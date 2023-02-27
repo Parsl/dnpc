@@ -66,7 +66,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         # this will trust UUID generation in parsl enough that the run_id
         # can be used to name the workflow span.
 
-        dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (run_id, 'parsl.workflow', 'Workflow from parsl monitoring.db'))
+        dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (run_id, 'parsl.monitoring.workflow', 'Workflow from parsl monitoring.db'))
 
         start_uuid = str(uuid.uuid4())
         start_time = db_time_to_unix(row[1])
@@ -96,7 +96,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         for task_row in task_rows:
             print(f"  Importing task {task_row[0]}")
             task_uuid = str(uuid.uuid4())
-            dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (task_uuid, 'parsl.task', 'Task from parsl monitoring.db'))
+            dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (task_uuid, 'parsl.monitoring.task', 'Task from parsl monitoring.db'))
 
             dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (run_id, task_uuid, task_row[0]))
 
@@ -114,7 +114,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 print(f"    Importing try {try_row[0]}")
                 # print(f"* PRE INSERT SPAN {time.time()}")
                 try_uuid = str(uuid.uuid4())
-                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (try_uuid, 'parsl.try', 'Try from parsl monitoring.db'))
+                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (try_uuid, 'parsl.monitoring.try', 'Try from parsl monitoring.db'))
 
                 # print(f"* PRE INSERT SUBSPAN {time.time()}")
                 dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (task_uuid, try_uuid, try_row[0]))

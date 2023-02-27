@@ -11,7 +11,7 @@ if __name__ == "__main__":
 with recursive
 
   descs(root_span_uuid, span_uuid) as (
-    select span.uuid, span.uuid from span where span.type="parsl.task"
+    select span.uuid, span.uuid from span where span.type="parsl.monitoring.task"
     union
     select descs.root_span_uuid, subspan.subspan_uuid
       from subspan, descs
