@@ -286,12 +286,15 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
             for e in parsl_tracing['events']:
                 print(f"parsl_tracing event: {e}")
-                timestamp = e[0]
+                event_time = e[0]
                 event_name = e[1]
                 span_type = e[2]
                 span_id = e[3]
 
                 k = (span_type, span_id)
+
+                # this bit handles the implicitness of span existence in
+                # parsl_tracing
                 if k not in tracing_span_uuids:
                     span_uuid = str(uuid.uuid4())
                     tracing_span_uuids[k] = span_uuid
@@ -299,6 +302,9 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                     dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (span_uuid, db_span_type, 'imported from parsl_tracing'))
                 else:
                     span_uuid = tracing_span_uuids[k]
+
+                event_uuid = str(uuid.uuid4())
+                dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_uuid, event_time, event_type, 'imported from parsl_tracing'))
 
             dnpc_db.commit()
 
