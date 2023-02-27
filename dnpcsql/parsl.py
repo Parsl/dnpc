@@ -208,7 +208,10 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         wq_id = m[2]
                         wq_span_uuid = wq_task_bindings[wq_id]
                         e_uuid = str(uuid.uuid4())
-                        dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (e_uuid, wq_span_uuid, e_time, 'WQS_completed', 'parsl.log entry for WQ Executor submit thread observing completion'))
+                        # TODO: this isn't part of the Work Queue level TASK so it should
+                        # form part of the event span of the work queue executor task
+                        # submission.
+                        dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (e_uuid, wq_span_uuid, e_time, 'WQE_completed', 'parsl.log entry for WQ Executor submit thread observing completion'))
                         
 
             print(f"task_try_to_wqe: {task_try_to_wqe}")
@@ -240,7 +243,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 if os.path.exists(function_log_filename):
                     print("WQ task log file exists")
                     wqe_task_log_span_uuid = str(uuid.uuid4())
-                    dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (wqe_task_log_span_uuid, 'parsl.wq.remote', 'parsl+wq executor'))
+                    dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (wqe_task_log_span_uuid, 'parsl.wqexecutor.remote', 'parsl+wq executor'))
 
                     with open(function_log_filename, "r") as f:
                       for log_line in f.readlines():
