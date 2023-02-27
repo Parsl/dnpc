@@ -288,7 +288,6 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             tracing_span_uuids = {}
 
             for e in parsl_tracing['events']:
-                print(f"parsl_tracing event: {e}")
                 event_time = e[0]
                 event_name = e[1]
                 span_type = e[2]
