@@ -148,6 +148,9 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
         print(f"(task,try)->uuid mappings are: {task_try_to_uuid}")
 
+
+        re_parsl_log_bind_task = re.compile('.* Parsl task (.*) try (.*) launched on executor (.*) with executor id (.*)')
+
         print(f"Checking for Work Queue logs in rundir {rundir}")
 
         # TODO: this WorkQueue substring is hardcoded here to align with the
@@ -160,7 +163,6 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         wq_tl_filename = f"{rundir}/{executor_label}/transaction_log"
         print(f"looking for: {wq_tl_filename}")
         if os.path.exists(wq_tl_filename):
-            re_parsl_log_bind_wq = re.compile('.* Parsl task (.*) try (.*) launched on executor (.*) with executor id (.*)')
             # 140737354053440 parsl.executors.workqueue.executor:994 _work_queue_submit_wait INFO: Executor task 20362 submitted to Work Queue with Work Queue task id 20363
             re_wqe_to_wq = re.compile('.* Executor task ([0-9]+) submitted to Work Queue with Work Queue task id ([0-9]+).*')
 
@@ -184,7 +186,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             parsl_log_filename = f"{rundir}/parsl.log"
             with open(parsl_log_filename, "r") as parsl_log:
                 for parsl_log_line in parsl_log:
-                    m = re_parsl_log_bind_wq.match(parsl_log_line)
+                    m = re_parsl_log_bind_task.match(parsl_log_line)
                     if m and m[3] == executor_label:
                         task_try_id = (int(m[1]), int(m[2]))
                         wqe_id = m[4]
@@ -330,6 +332,24 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         # 2023-03-06 11:20:17.249 worker_log:597 18304 MainThread [INFO]  Received executor task 41
         # 2023-03-06 11:20:17.282 worker_log:615 18304 MainThread [INFO]  Completed executor task 41
         # 2023-03-06 11:20:17.282 worker_log:626 18304 MainThread [INFO]  All processing finished for executor task 41
+
+        # now bind htex tasks to parsl tries
+        # this code is related to code in the work queue importing code
+        # that does the same "executor level task ID to parsl level
+        # try ID", but WQ has an extra layer of IDs beyond the executor
+        # task ID that htex does not.
+
+        parsl_log_filename = f"{rundir}/parsl.log"
+        with open(parsl_log_filename, "r") as parsl_log:
+            for parsl_log_line in parsl_log:
+                m = re_parsl_log_bind_task.match(parsl_log_line)
+                if m and m[3] == executor_label:
+                    task_try_id = (int(m[1]), int(m[2]))
+                    htex_task_id = int(m[4])
+
+                    task_try_uuid = task_try_to_uuid[task_try_id]
+                    htex_task_uuid = htex_task_to_uuid[htex_task_id]
+                    dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (task_try_uuid, htex_task_uuid, "htex subtask"))
 
         dnpc_db.commit()
 
