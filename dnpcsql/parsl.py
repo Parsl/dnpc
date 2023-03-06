@@ -114,20 +114,16 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             try_rows = list(monitoring_cursor.execute("SELECT try_id FROM try WHERE run_id = ? AND task_id = ?", (run_id, task_row[0])))
             for try_row in try_rows:
                 print(f"    Importing try {try_row[0]}")
-                # print(f"* PRE INSERT SPAN {time.time()}")
                 try_uuid = str(uuid.uuid4())
                 dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (try_uuid, 'parsl.monitoring.try', 'Try from parsl monitoring.db'))
 
-                # print(f"* PRE INSERT SUBSPAN {time.time()}")
                 dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (task_uuid, try_uuid, try_row[0]))
 
-                # print(f"* PRE SELECT STATUS {time.time()}")
                 status_rows = list(monitoring_cursor.execute("SELECT task_status_name, timestamp FROM status WHERE run_id = ? AND task_id = ? AND try_id = ?", (run_id, task_row[0], try_row[0])))
                 for status_row in status_rows:
                     print(f"      Importing status {status_row[0]} at {status_row[1]}")
                     status_uuid = str(uuid.uuid4())
                     status_time = db_time_to_unix(status_row[1])
-                    # print(f"* PRE INSERT EVENT {time.time()}")
                     dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (status_uuid, try_uuid, status_time, status_row[0], 'Status in parsl monitoring.db'))
 
                 # store (task,try) -> try span uuid mapping for use later
@@ -188,7 +184,6 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             parsl_log_filename = f"{rundir}/parsl.log"
             with open(parsl_log_filename, "r") as parsl_log:
                 for parsl_log_line in parsl_log:
-                    # print(parsl_log_line)
                     m = re1.match(parsl_log_line)
                     if m and m[3] == executor_label:
                         task_try_id = (int(m[1]), int(m[2]))
@@ -201,7 +196,6 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         wqe_to_wq[wqe_id] = wq_id
                     m = re_wq_compl.match(parsl_log_line)
                     if m:
-                        # print("adding completion event to wq")
                         e_time = m[1]
                         wq_id = m[2]
                         wq_span_uuid = wq_task_bindings[wq_id]
