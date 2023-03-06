@@ -326,7 +326,44 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
         # next, manager logs
         # 2023-03-06 11:20:07.190 parsl:304 18294 Task-Puller [DEBUG]  Got executor tasks: [1], cumulative count of tasks: 1
+        re_manager_got_tasks = re.compile('(.*) parsl:.* Got executor tasks: \[(.+)\].*$')
         # manager does not log the identity of task results - because it never unpacks them? not sure why that's different than the task send path?
+
+        # manager logs appear under a block ID then a manager ID in the path,
+        # e.g. runinfo/000/htex_Local/block-0/4bf9bf8c1848/manager.log
+
+        # so find all of these and then run manager and worker log processing
+        # for each manager directory.
+
+        manager_dirs = [d for (d,df,ff) in os.walk(f"{rundir}/{executor_label}") if "manager.log" in ff]
+
+        for manager_dir in manager_dirs:
+            print(f"Processing manager directory {manager_dir}")
+
+            manager_filename = f"{manager_dir}/manager.log"
+            print(f"looking for: {manager_filename}")
+            if os.path.exists(manager_filename):
+                with open(manager_filename, "r") as f:
+                    for log_line in f.readlines():
+                        m = re_manager_got_tasks.match(log_line)
+                        if m:
+                            event_time = datetime.datetime.strptime(m[1], "%Y-%m-%d %H:%M:%S.%f").timestamp()
+                            task_id = int(m[2])
+                            if task_id not in htex_task_to_uuid:
+                                htex_task_span_uuid = str(uuid.uuid4())
+                                htex_task_to_uuid[task_id] = htex_task_span_uuid
+                                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
+                            else:
+                                htex_task_span_uuid = htex_task_to_uuid[task_id]
+
+                            event_uuid = str(uuid.uuid4())
+                            event_type = "manager_got_task"
+                            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, htex_task_span_uuid, event_time, event_type, 'from manager.log'))
+
+            else:
+                raise RuntimeError("manager log was not found in manager directory")
+
+
 
         # next, worker logs
         # 2023-03-06 11:20:17.249 worker_log:597 18304 MainThread [INFO]  Received executor task 41
