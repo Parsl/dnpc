@@ -363,12 +363,65 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             else:
                 raise RuntimeError("manager log was not found in manager directory")
 
+            # next, worker logs
+            # 2023-03-06 11:20:17.249 worker_log:597 18304 MainThread [INFO]  Received executor task 41
+            re_worker_received_task = re.compile('(.*) worker_log:.* Received executor task ([^ ]+).*$')
+            # 2023-03-06 11:20:17.282 worker_log:615 18304 MainThread [INFO]  Completed executor task 41
+            re_worker_completed_task = re.compile('(.*) worker_log:.* Completed executor task ([^ ]+).*$')
+            # 2023-03-06 11:20:17.282 worker_log:626 18304 MainThread [INFO]  All processing finished for executor task 41
+            re_worker_all_finished_task = re.compile('(.*) worker_log:.* All processing finished for executor task ([^ ]+).*$')
+
+            # worker log files are in the manager directory and are named like this:
+            # runinfo/000/htex_Local/block-0/4bf9bf8c1848/worker_6.log
+
+            worker_logs = [f for f in os.listdir(manager_dir) if f.startswith("worker_")]
+
+            for worker_filename in worker_logs:
+                with open(f"{manager_dir}/{worker_filename}", "r") as f:
+                    for log_line in f.readlines():
+                        m = re_worker_received_task.match(log_line)
+                        if m:
+                            event_time = datetime.datetime.strptime(m[1], "%Y-%m-%d %H:%M:%S.%f").timestamp()
+                            task_id = int(m[2])
+                            if task_id not in htex_task_to_uuid:
+                                htex_task_span_uuid = str(uuid.uuid4())
+                                htex_task_to_uuid[task_id] = htex_task_span_uuid
+                                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
+                            else:
+                                htex_task_span_uuid = htex_task_to_uuid[task_id]
+                            event_uuid = str(uuid.uuid4())
+                            event_type = "worker_received_task"
+                            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, htex_task_span_uuid, event_time, event_type, 'from worker_*.log'))
+
+                        m = re_worker_completed_task.match(log_line)
+                        if m:
+                            event_time = datetime.datetime.strptime(m[1], "%Y-%m-%d %H:%M:%S.%f").timestamp()
+                            task_id = int(m[2])
+                            if task_id not in htex_task_to_uuid:
+                                htex_task_span_uuid = str(uuid.uuid4())
+                                htex_task_to_uuid[task_id] = htex_task_span_uuid
+                                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
+                            else:
+                                htex_task_span_uuid = htex_task_to_uuid[task_id]
+                            event_uuid = str(uuid.uuid4())
+                            event_type = "worker_completed_task"
+                            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, htex_task_span_uuid, event_time, event_type, 'from worker_*.log'))
+
+                        m = re_worker_all_finished_task.match(log_line)
+                        if m:
+                            event_time = datetime.datetime.strptime(m[1], "%Y-%m-%d %H:%M:%S.%f").timestamp()
+                            task_id = int(m[2])
+                            if task_id not in htex_task_to_uuid:
+                                htex_task_span_uuid = str(uuid.uuid4())
+                                htex_task_to_uuid[task_id] = htex_task_span_uuid
+                                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
+                            else:
+                                htex_task_span_uuid = htex_task_to_uuid[task_id]
+                            event_uuid = str(uuid.uuid4())
+                            event_type = "worker_all_finished_task"
+                            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, htex_task_span_uuid, event_time, event_type, 'from worker_*.log'))
 
 
-        # next, worker logs
-        # 2023-03-06 11:20:17.249 worker_log:597 18304 MainThread [INFO]  Received executor task 41
-        # 2023-03-06 11:20:17.282 worker_log:615 18304 MainThread [INFO]  Completed executor task 41
-        # 2023-03-06 11:20:17.282 worker_log:626 18304 MainThread [INFO]  All processing finished for executor task 41
 
         # now bind htex tasks to parsl tries
         # this code is related to code in the work queue importing code
