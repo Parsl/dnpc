@@ -2,9 +2,11 @@ import re
 import sqlite3
 import uuid
 
+from typing import Dict
+
 from dnpcsql.importerlib import store_event
 
-def import_all(db: sqlite3.Connection, transaction_log_path):
+def import_all(db: sqlite3.Connection, transaction_log_path) -> Dict[str, str]:
     """Imports tasks from transaction_log and returns a dict that maps
     from work queue task numbers to the relevant task spans, with the
     intention that this be used by integrating pieces to tie wq tasks
