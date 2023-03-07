@@ -58,7 +58,7 @@ order by root_span_uuid, event.time;
           span_type=e[2]
           event_type=e[3]
           print(f"  {event_time} {span_type}/{event_type}")
-          hash_material += " {event_time} {span_type} {event_type}"
+          hash_material += f" {span_type} {event_type}"
       h = hash(hash_material)
       print(f"hash of this sequence: {h}")
       if h not in hash_counts:
@@ -98,6 +98,8 @@ order by root_span_uuid, event.time;
       last_time = float(s[0][1])
       n = 0
       for e in s:
+        if example_events[n][3] != e[3]:
+            raise RuntimeError(f"Implementation error: this event is not in template sequence: template event type at this position: {example_events[n][3]}, this event type {e[3]}")
         event_time = float(e[1])
         time_since_last = event_time - last_time
         template_events[n] += time_since_last
