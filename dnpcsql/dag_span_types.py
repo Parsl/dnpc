@@ -35,13 +35,13 @@ if __name__ == "__main__":
         print("digraph G {", file=f)
 
         for r in span_type_rows:
-            print(f"\"{r[0]}\"; ", file=f);
+            print(f"\"{r[0]}\"; ", file=f)
 
         for r in subspan_relation_rows:
-            print(f"\"{r[0]}\" -> \"{r[1]}\"; ", file=f);
+            print(f"\"{r[0]}\" -> \"{r[1]}\"; ", file=f)
 
         for r in facet_relation_rows:
-            print(f"\"{r[0]}\" -> \"{r[1]}\" [ color = \"blue\", dir = both  ]; ", file=f);
+            print(f"\"{r[0]}\" -> \"{r[1]}\" [ color = \"blue\", dir = both  ]; ", file=f)
 
         print("}", file=f)
 
