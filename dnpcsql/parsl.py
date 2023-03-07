@@ -9,7 +9,7 @@ import uuid
 import dnpcsql.workqueue
 from dnpcsql.importerlib import local_key_to_span_uuid, store_event
 
-from typing import Dict, TypeVar
+from typing import Dict, Tuple, TypeVar
 
 # There are multiple parsl data sources.
 # The big ones are:
@@ -501,90 +501,10 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
         dnpc_db.commit()
 
-        # Now import pickled event stats from parsl_tracing.pickle which is
-        # a DESC-branch specific development.
-        # Right now there isn't enough info to tie such a pickle file into
-        # particular workflow: that's because there is a conflation between
-        # a Python process and a DFK (aka workflow) instance, with a lot
-        # of parsl code not being aware of how it is associated with a
-        # particular DFK.
-        # so this code will have to make some assumptions.
-
-        tracing_task_to_uuid = {}
-
-        parsl_tracing_filename=f"{rundir}/parsl_tracing.pickle"
-        if os.path.exists(parsl_tracing_filename):
-            with open(parsl_tracing_filename, "rb") as f:
-                parsl_tracing = pickle.load(f)
-
-            assert 'events' in parsl_tracing
-            assert 'binds' in parsl_tracing
-
-            # parsl_tracing.pickle contains both events and binds between
-            # spans. The existence of spans is implict, by being mentioned
-            # either in an event or a bind, so a span cannot exist in
-            # isolation with neither events nor binds.
-
-            tracing_span_uuids = {}
-
-            for e in parsl_tracing['events']:
-                event_time = e[0]
-                event_name = e[1]
-                span_type = e[2]
-                span_id = e[3]
-
-                k = (span_type, span_id)
-
-                span_uuid = local_key_to_span_uuid(
-                    cursor = dnpc_cursor,
-                    local_key = k,
-                    namespace = tracing_span_uuids,
-                    span_type = "parsl.tracing." + span_type,
-                    description = "imported from parsl_tracing")
-
-                # can this be inferred later on in a binding stage
-                # because the keys of tracing_span_uuids already
-                # contain this information? it would split more nicely along
-                # the importer A / importer B / binder A<->B modularisation
-                # idea?
-                if span_type == "TASK":
-                    tracing_task_id = span_id
-                    print(f"Found tracing TASK with ID {tracing_task_id}")
-                    tracing_task_to_uuid[tracing_task_id] = span_uuid
-
-                store_event(cursor=dnpc_cursor,
-                            span_uuid=span_uuid,
-                            event_time=event_time,
-                            event_type=event_name,
-                            description='imported from parsl_tracing')
- 
-            for b in parsl_tracing['binds']:
-                super_type = b[0]
-                super_id = b[1]
-                sub_type = b[2]
-                sub_id = b[3]
-
-                super_k = (super_type, super_id)
-
-                super_uuid = local_key_to_span_uuid(
-                    cursor = dnpc_cursor,
-                    local_key = super_k,
-                    namespace = tracing_span_uuids,
-                    span_type = "parsl.tracing." + super_type,
-                    description = "imported from parsl_tracing")
-
-                sub_k = (sub_type, sub_id)
-
-                sub_uuid = local_key_to_span_uuid(
-                    cursor = dnpc_cursor,
-                    local_key = sub_k,
-                    namespace = tracing_span_uuids,
-                    span_type = "parsl.tracing." + sub_type,
-                    description = "imported from parsl_tracing")
-
-                dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (super_uuid, sub_uuid, str((sub_type, sub_id))))
-
-            dnpc_db.commit()
+        tracing_task_to_uuid = import_parsl_tracing(
+            cursor = dnpc_cursor,
+            rundir = rundir)
+        dnpc_db.commit()
 
         # now tie together facets of the same entity from tracing and monitoring:
         # tasks
@@ -607,6 +527,93 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 dnpc_cursor.execute("INSERT INTO facet (left_uuid, right_uuid, note) VALUES (?, ?, ?)", (tracing_task_to_uuid[task_id], monitoring_task_to_uuid[task_id], "joined by importer"))
 
         dnpc_db.commit()
+
+
+def import_parsl_tracing(*, cursor, rundir: str):
+    # Now import pickled event stats from parsl_tracing.pickle which is
+    # a DESC-branch specific development.
+    # Right now there isn't enough info to tie such a pickle file into
+    # particular workflow: that's because there is a conflation between
+    # a Python process and a DFK (aka workflow) instance, with a lot
+    # of parsl code not being aware of how it is associated with a
+    # particular DFK.
+    # so this code will have to make some assumptions.
+
+    tracing_task_to_uuid = {}
+
+    parsl_tracing_filename=f"{rundir}/parsl_tracing.pickle"
+    if os.path.exists(parsl_tracing_filename):
+        with open(parsl_tracing_filename, "rb") as f:
+            parsl_tracing = pickle.load(f)
+
+        assert 'events' in parsl_tracing
+        assert 'binds' in parsl_tracing
+
+        # parsl_tracing.pickle contains both events and binds between
+        # spans. The existence of spans is implict, by being mentioned
+        # either in an event or a bind, so a span cannot exist in
+        # isolation with neither events nor binds.
+
+        tracing_span_uuids: Dict[Tuple[str, str], str] = {}
+
+        for e in parsl_tracing['events']:
+            event_time = e[0]
+            event_name = e[1]
+            span_type = e[2]
+            span_id = e[3]
+
+            k = (span_type, span_id)
+
+            span_uuid = local_key_to_span_uuid(
+                cursor = cursor,
+                local_key = k,
+                namespace = tracing_span_uuids,
+                span_type = "parsl.tracing." + span_type,
+                description = "imported from parsl_tracing")
+
+            # can this be inferred later on in a binding stage
+            # because the keys of tracing_span_uuids already
+            # contain this information? it would split more nicely along
+            # the importer A / importer B / binder A<->B modularisation
+            # idea?
+            if span_type == "TASK":
+                tracing_task_id = span_id
+                print(f"Found tracing TASK with ID {tracing_task_id}")
+                tracing_task_to_uuid[tracing_task_id] = span_uuid
+
+            store_event(cursor=cursor,
+                        span_uuid=span_uuid,
+                        event_time=event_time,
+                        event_type=event_name,
+                        description='imported from parsl_tracing')
+ 
+        for b in parsl_tracing['binds']:
+            super_type = b[0]
+            super_id = b[1]
+            sub_type = b[2]
+            sub_id = b[3]
+
+            super_k = (super_type, super_id)
+
+            super_uuid = local_key_to_span_uuid(
+                cursor = cursor,
+                local_key = super_k,
+                namespace = tracing_span_uuids,
+                span_type = "parsl.tracing." + super_type,
+                description = "imported from parsl_tracing")
+
+            sub_k = (sub_type, sub_id)
+
+            sub_uuid = local_key_to_span_uuid(
+                cursor = cursor,
+                local_key = sub_k,
+                namespace = tracing_span_uuids,
+                span_type = "parsl.tracing." + sub_type,
+                description = "imported from parsl_tracing")
+
+            cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (super_uuid, sub_uuid, str((sub_type, sub_id))))
+
+    return tracing_task_to_uuid
 
 def db_time_to_unix(s: str):
     return datetime.datetime.fromisoformat(s).timestamp()
