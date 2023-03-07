@@ -7,6 +7,7 @@ import time
 import uuid
 
 import dnpcsql.workqueue
+from dnpcsql.importerlib import store_event
 
 # There are multiple parsl data sources.
 # The big ones are:
@@ -68,14 +69,24 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
         dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (run_id, 'parsl.monitoring.workflow', 'Workflow from parsl monitoring.db'))
 
-        start_uuid = str(uuid.uuid4())
         start_time = db_time_to_unix(row[1])
-        dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (start_uuid, run_id, start_time, 'began', 'Start of workflow from parsl monitoring.db'))
+
+        store_event(cursor=dnpc_cursor,
+                    span_uuid=run_id,
+                    event_time=start_time,
+                    event_type='began',
+                    description='Start of workflow from parsl monitoring.db'
+                   )
 
         if row[2]:  # non-null end time
-            end_uuid = str(uuid.uuid4())
             end_time = db_time_to_unix(row[2])
-            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (end_uuid, run_id, end_time, 'completed', 'End of workflow from parsl monitoring.db'))
+
+            store_event(cursor=dnpc_cursor,
+                        span_uuid=run_id,
+                        event_time=end_time,
+                        event_type='completed',
+                        description='End of workflow from parsl monitoring.db'
+                       )
 
         dnpc_db.commit()
 
@@ -102,14 +113,24 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
             dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (run_id, task_uuid, task_row[0]))
 
-            invoked_uuid = str(uuid.uuid4())
             invoked_time = db_time_to_unix(task_row[1])
-            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (invoked_uuid, task_uuid, invoked_time, 'invoked', 'Task invoked in parsl monitoring.db'))
+
+            store_event(cursor=dnpc_cursor,
+                        span_uuid=task_uuid,
+                        event_time=invoked_time,
+                        event_type='invoked',
+                        description='Task invoked in parsl monitoring.db'
+                       )
 
             if task_row[2]:
-                returned_uuid = str(uuid.uuid4())
                 returned_time = db_time_to_unix(task_row[2])
-                dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (returned_uuid, task_uuid, returned_time, 'returned', 'Task returned in parsl monitoring.db'))
+
+                store_event(cursor=dnpc_cursor,
+                            span_uuid=task_uuid,
+                            event_time=returned_time,
+                            event_type='returned',
+                            description='Task returned in parsl monitoring.db'
+                           )
             
             try_rows = list(monitoring_cursor.execute("SELECT try_id FROM try WHERE run_id = ? AND task_id = ?", (run_id, task_row[0])))
             for try_row in try_rows:
@@ -122,9 +143,14 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 status_rows = list(monitoring_cursor.execute("SELECT task_status_name, timestamp FROM status WHERE run_id = ? AND task_id = ? AND try_id = ?", (run_id, task_row[0], try_row[0])))
                 for status_row in status_rows:
                     print(f"      Importing status {status_row[0]} at {status_row[1]}")
-                    status_uuid = str(uuid.uuid4())
                     status_time = db_time_to_unix(status_row[1])
-                    dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (status_uuid, try_uuid, status_time, status_row[0], 'Status in parsl monitoring.db'))
+
+                    store_event(cursor=dnpc_cursor,
+                                span_uuid=try_uuid,
+                                event_time=status_time,
+                                event_type=status_row[0],
+                                description='Status in parsl monitoring.db'
+                               )
 
                 # store (task,try) -> try span uuid mapping for use later
                 task_try_to_uuid[(task_row[0], try_row[0])] = try_uuid
@@ -201,12 +227,16 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         e_time = m[1]
                         wq_id = m[2]
                         wq_span_uuid = wq_task_bindings[wq_id]
-                        e_uuid = str(uuid.uuid4())
+
                         # TODO: this isn't part of the Work Queue level TASK so it should
                         # form part of the event span of the work queue executor task
                         # submission.
-                        dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (e_uuid, wq_span_uuid, e_time, 'WQE_completed', 'parsl.log entry for WQ Executor submit thread observing completion'))
-                        
+
+                        store_event(cursor=dnpc_cursor,
+                                    span_uuid=wq_span_uuid,
+                                    event_time=e_time,
+                                    event_type='WQE_completed',
+                                    description='parsl.log entry for WQ Executor submit thread observing completion')
 
             print(f"task_try_to_wqe: {task_try_to_wqe}")
             print(f"wqe_to_wq: {wqe_to_wq}")
@@ -249,8 +279,12 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                           event_type=m[2]
                           if event_type.startswith("META_PATH "):
                             continue
-                          event_uuid = str(uuid.uuid4())
-                          dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, wqe_task_log_span_uuid, event_time, event_type, 'parsl wq remote task log entry'))
+
+                          store_event(cursor=dnpc_cursor,
+                                      span_uuid=wqe_task_log_span_uuid,
+                                      event_time=event_time,
+                                      event_type=event_type,
+                                      description='parsl wq remote task log entry')
 
                     wq_id = wqe_to_wq[wqe_id]
                     wq_span_uuid = wq_task_bindings[wq_id]
@@ -304,9 +338,11 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         else:
                             htex_task_span_uuid = htex_task_to_uuid[task_id]
 
-                        event_uuid = str(uuid.uuid4())
-                        event_type = "interchange_to_manager"
-                        dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, htex_task_span_uuid, event_time, event_type, 'from interchange.log'))
+                        store_event(cursor=dnpc_cursor,
+                                    span_uuid=htex_task_span_uuid,
+                                    event_time=event_time,
+                                    event_type='interchange_to_manager',
+                                    description='from interchange.log')
 
                     m = re_interchange_removing_task.match(log_line)
                     if m:
@@ -320,9 +356,11 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         else:
                             htex_task_span_uuid = htex_task_to_uuid[task_id]
 
-                        event_uuid = str(uuid.uuid4())
-                        event_type = "interchange_removing_task"
-                        dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, htex_task_span_uuid, event_time, event_type, 'from interchange.log'))
+                        store_event(cursor=dnpc_cursor,
+                                    span_uuid=htex_task_span_uuid,
+                                    event_time=event_time,
+                                    event_type='interchange_removing_task',
+                                    description='from interchange.log')
 
         # next, manager logs
         # 2023-03-06 11:20:07.190 parsl:304 18294 Task-Puller [DEBUG]  Got executor tasks: [1], cumulative count of tasks: 1
@@ -356,9 +394,11 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                             else:
                                 htex_task_span_uuid = htex_task_to_uuid[task_id]
 
-                            event_uuid = str(uuid.uuid4())
-                            event_type = "manager_got_task"
-                            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, htex_task_span_uuid, event_time, event_type, 'from manager.log'))
+                            store_event(cursor=dnpc_cursor,
+                                        span_uuid=htex_task_span_uuid,
+                                        event_time=event_time,
+                                        event_type='manager_got_task',
+                                        description='from manager.log')
 
             else:
                 raise RuntimeError("manager log was not found in manager directory")
@@ -389,9 +429,12 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                                 dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
                             else:
                                 htex_task_span_uuid = htex_task_to_uuid[task_id]
-                            event_uuid = str(uuid.uuid4())
-                            event_type = "worker_received_task"
-                            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, htex_task_span_uuid, event_time, event_type, 'from worker_*.log'))
+
+                            store_event(cursor=dnpc_cursor,
+                                        span_uuid=htex_task_span_uuid,
+                                        event_time=event_time,
+                                        event_type='worker_received_task',
+                                        description='from worker_*.log')
 
                         m = re_worker_completed_task.match(log_line)
                         if m:
@@ -403,9 +446,14 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                                 dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
                             else:
                                 htex_task_span_uuid = htex_task_to_uuid[task_id]
-                            event_uuid = str(uuid.uuid4())
-                            event_type = "worker_completed_task"
-                            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, htex_task_span_uuid, event_time, event_type, 'from worker_*.log'))
+
+
+                            store_event(cursor=dnpc_cursor,
+                                        span_uuid=htex_task_span_uuid,
+                                        event_time=event_time,
+                                        event_type='worker_completed_task',
+                                        description='from worker_*.log'
+                                       )
 
                         m = re_worker_all_finished_task.match(log_line)
                         if m:
@@ -417,11 +465,12 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                                 dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
                             else:
                                 htex_task_span_uuid = htex_task_to_uuid[task_id]
-                            event_uuid = str(uuid.uuid4())
-                            event_type = "worker_all_finished_task"
-                            dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, htex_task_span_uuid, event_time, event_type, 'from worker_*.log'))
 
-
+                            store_event(cursor=dnpc_cursor,
+                                        span_uuid=htex_task_span_uuid,
+                                        event_time=event_time,
+                                        event_type='worker_all_finished_task',
+                                        description='from worker_*.log')
 
         # now bind htex tasks to parsl tries
         # this code is related to code in the work queue importing code
@@ -493,10 +542,13 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         tracing_task_to_uuid[tracing_task_id] = span_uuid
                 else:
                     span_uuid = tracing_span_uuids[k]
-    
-                event_uuid = str(uuid.uuid4())
-                dnpc_cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_uuid, event_time, event_name, 'imported from parsl_tracing'))
-
+   
+                store_event(cursor=dnpc_cursor,
+                            span_uuid=span_uuid,
+                            event_time=event_time,
+                            event_type=event_name,
+                            description='imported from parsl_tracing')
+ 
             for b in parsl_tracing['binds']:
                 super_type = b[0]
                 super_id = b[1]

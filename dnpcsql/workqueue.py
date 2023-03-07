@@ -2,6 +2,8 @@ import re
 import sqlite3
 import uuid
 
+from dnpcsql.importerlib import store_event
+
 def import_all(db: sqlite3.Connection, transaction_log_path):
     """Imports tasks from transaction_log and returns a dict that maps
     from work queue task numbers to the relevant task spans, with the
@@ -48,11 +50,14 @@ def import_all(db: sqlite3.Connection, transaction_log_path):
                     span_id = task_to_span_map[wq_task_id]
                     print(f"Existing task {wq_task_id} with span {span_id}")
 
-                event_uuid = str(uuid.uuid4())
                 unix_time = float(m[1]) / 1000000.0
 
-                cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)", (event_uuid, span_id, unix_time, m[3], 'Event from transaction_log'))
- 
+                store_event(cursor=cursor,
+                            span_uuid=span_id,
+                            event_time=unix_time,
+                            event_type=m[3],
+                            description='Event from transaction_log'
+                           )
     db.commit() 
     print("done importing from work_queue")
     return task_to_span_map
