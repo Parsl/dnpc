@@ -41,8 +41,7 @@ if __name__ == "__main__":
             print(f"\"{r[0]}\" -> \"{r[1]}\"; ", file=f);
 
         for r in facet_relation_rows:
-            print(f"\"{r[0]}\" -> \"{r[1]}\"; ", file=f);
-            print(f"\"{r[1]}\" -> \"{r[0]}\"; ", file=f);
+            print(f"\"{r[0]}\" -> \"{r[1]}\" [ color = \"blue\", dir = both  ]; ", file=f);
 
         print("}", file=f)
 
