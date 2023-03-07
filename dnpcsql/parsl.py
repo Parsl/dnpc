@@ -281,7 +281,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             # 2023-03-06 11:20:07.190 interchange:485 HTEX-Interchange(18277) MainThread process_tasks_to_send [DEBUG]  Sent tasks: [1] to manager b'4bf9bf8c1848'
             re_interchange_task_to_manager = re.compile('(.*) interchange:.* Sent tasks: \[(.*)\] to manager.*$')
             # 2023-03-06 11:20:08.040 interchange:533 HTEX-Interchange(18277) MainThread process_results_incoming [DEBUG]  Removing task 3 from manager record b'4bf9bf8c1848'
-            re_interchange_removing_task =   re.compile('(.*) interchange:.* Removing task ([0-9]+) .*$')
+            re_interchange_removing_task = re.compile('(.*) interchange:.* Removing task ([0-9]+) .*$')
             with open(htex_interchange_filename, "r") as f:
                 for log_line in f.readlines():
                     # for parsing a logfile timestamp:
