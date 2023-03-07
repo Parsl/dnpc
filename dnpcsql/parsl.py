@@ -318,11 +318,9 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             re_interchange_removing_task = re.compile('(.*) interchange:.* Removing task ([0-9]+) .*$')
             with open(htex_interchange_filename, "r") as f:
                 for log_line in f.readlines():
-                    # for parsing a logfile timestamp:
-                    # event.time = datetime.datetime.strptime(timestamp + "." + fractime, "%Y-%m-%d %H:%M:%S.%f").timestamp()
                     m = re_interchange_task_to_manager.match(log_line)
                     if m:
-                        event_time = datetime.datetime.strptime(m[1], "%Y-%m-%d %H:%M:%S.%f").timestamp()
+                        event_time = logfile_time_to_unix(m[1])
                         tasklist = m[2]
                         # TODO: this assumes that there's only one task in the task list
                         # which won't work except in serialised use cases - an exception
@@ -346,7 +344,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
                     m = re_interchange_removing_task.match(log_line)
                     if m:
-                        event_time = datetime.datetime.strptime(m[1], "%Y-%m-%d %H:%M:%S.%f").timestamp()
+                        event_time = logfile_time_to_unix(m[1])
                         task_id = int(m[2])
 
                         if task_id not in htex_task_to_uuid:
@@ -385,7 +383,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                     for log_line in f.readlines():
                         m = re_manager_got_tasks.match(log_line)
                         if m:
-                            event_time = datetime.datetime.strptime(m[1], "%Y-%m-%d %H:%M:%S.%f").timestamp()
+                            event_time = logfile_time_to_unix(m[1])
                             task_id = int(m[2])
                             if task_id not in htex_task_to_uuid:
                                 htex_task_span_uuid = str(uuid.uuid4())
@@ -421,7 +419,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                     for log_line in f.readlines():
                         m = re_worker_received_task.match(log_line)
                         if m:
-                            event_time = datetime.datetime.strptime(m[1], "%Y-%m-%d %H:%M:%S.%f").timestamp()
+                            event_time = logfile_time_to_unix(m[1])
                             task_id = int(m[2])
                             if task_id not in htex_task_to_uuid:
                                 htex_task_span_uuid = str(uuid.uuid4())
@@ -438,7 +436,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
                         m = re_worker_completed_task.match(log_line)
                         if m:
-                            event_time = datetime.datetime.strptime(m[1], "%Y-%m-%d %H:%M:%S.%f").timestamp()
+                            event_time = logfile_time_to_unix(m[1])
                             task_id = int(m[2])
                             if task_id not in htex_task_to_uuid:
                                 htex_task_span_uuid = str(uuid.uuid4())
@@ -457,7 +455,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
                         m = re_worker_all_finished_task.match(log_line)
                         if m:
-                            event_time = datetime.datetime.strptime(m[1], "%Y-%m-%d %H:%M:%S.%f").timestamp()
+                            event_time = logfile_time_to_unix(m[1])
                             task_id = int(m[2])
                             if task_id not in htex_task_to_uuid:
                                 htex_task_span_uuid = str(uuid.uuid4())
@@ -603,3 +601,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 def db_time_to_unix(s: str):
     return datetime.datetime.fromisoformat(s).timestamp()
 
+def logfile_time_to_unix(s: str) -> float:
+    """Converts a parsl logfile timestamp like 2023-03-06 11:20:17.282
+    to a unix time"""
+    return datetime.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%f").timestamp()
