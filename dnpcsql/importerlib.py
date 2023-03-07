@@ -1,10 +1,11 @@
 import uuid
 
-def store_event(*, cursor,
-                   span_uuid: str,
-                   event_time: float,
-                   event_type: str,
-                   description: str):
+def store_event(*,
+                cursor,
+                span_uuid: str,
+                event_time: float,
+                event_type: str,
+                description: str):
     """writes an event into the database"""
 
     event_uuid = str(uuid.uuid4())
