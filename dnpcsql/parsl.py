@@ -9,6 +9,8 @@ import uuid
 import dnpcsql.workqueue
 from dnpcsql.importerlib import store_event
 
+from typing import Dict, TypeVar
+
 # There are multiple parsl data sources.
 # The big ones are:
 # - monitoring.db
@@ -106,12 +108,17 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         
         task_rows = list(monitoring_cursor.execute("SELECT task_id, task_time_invoked, task_time_returned FROM task WHERE run_id = ?", (run_id,)))
         for task_row in task_rows:
-            print(f"  Importing task {task_row[0]}")
-            task_uuid = str(uuid.uuid4())
-            monitoring_task_to_uuid[int(task_row[0])] = task_uuid
-            dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (task_uuid, 'parsl.monitoring.task', 'Task from parsl monitoring.db'))
+            task_id = task_row[0]
+            print(f"  Importing task {task_id}")
 
-            dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (run_id, task_uuid, task_row[0]))
+            task_uuid = local_key_to_span_uuid(
+                cursor = dnpc_cursor,
+                local_key = int(task_id),
+                namespace = monitoring_task_to_uuid,
+                span_type = 'parsl.monitoring.task',
+                description = "Task from parsl monitoring.db")
+
+            dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (run_id, task_uuid, task_id))
 
             invoked_time = db_time_to_unix(task_row[1])
 
@@ -266,6 +273,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 print(f"Filename: {function_log_filename}")
                 if os.path.exists(function_log_filename):
                     print("WQ task log file exists")
+
                     wqe_task_log_span_uuid = str(uuid.uuid4())
                     dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (wqe_task_log_span_uuid, 'parsl.wqexecutor.remote', 'parsl+wq executor'))
 
@@ -329,12 +337,12 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         # message.
                         task_id = int(tasklist)
 
-                        if task_id not in htex_task_to_uuid:
-                            htex_task_span_uuid = str(uuid.uuid4())
-                            htex_task_to_uuid[task_id] = htex_task_span_uuid
-                            dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
-                        else:
-                            htex_task_span_uuid = htex_task_to_uuid[task_id]
+                        htex_task_span_uuid = local_key_to_span_uuid(
+                            cursor = dnpc_cursor,
+                            local_key = task_id,
+                            namespace = htex_task_to_uuid,
+                            span_type = 'parsl.executor.htex.task',
+                            description = 'from interchange.log')
 
                         store_event(cursor=dnpc_cursor,
                                     span_uuid=htex_task_span_uuid,
@@ -347,12 +355,12 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         event_time = logfile_time_to_unix(m[1])
                         task_id = int(m[2])
 
-                        if task_id not in htex_task_to_uuid:
-                            htex_task_span_uuid = str(uuid.uuid4())
-                            htex_task_to_uuid[task_id] = htex_task_span_uuid
-                            dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
-                        else:
-                            htex_task_span_uuid = htex_task_to_uuid[task_id]
+                        htex_task_span_uuid = local_key_to_span_uuid(
+                            cursor = dnpc_cursor,
+                            local_key = task_id,
+                            namespace = htex_task_to_uuid,
+                            span_type = 'parsl.executor.htex.task',
+                            description = 'from interchange.log')
 
                         store_event(cursor=dnpc_cursor,
                                     span_uuid=htex_task_span_uuid,
@@ -385,12 +393,13 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         if m:
                             event_time = logfile_time_to_unix(m[1])
                             task_id = int(m[2])
-                            if task_id not in htex_task_to_uuid:
-                                htex_task_span_uuid = str(uuid.uuid4())
-                                htex_task_to_uuid[task_id] = htex_task_span_uuid
-                                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
-                            else:
-                                htex_task_span_uuid = htex_task_to_uuid[task_id]
+
+                            htex_task_span_uuid = local_key_to_span_uuid(
+                                cursor = dnpc_cursor,
+                                local_key = task_id,
+                                namespace = htex_task_to_uuid,
+                                span_type = 'parsl.executor.htex.task',
+                                description = 'from interchange.log')
 
                             store_event(cursor=dnpc_cursor,
                                         span_uuid=htex_task_span_uuid,
@@ -421,12 +430,13 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         if m:
                             event_time = logfile_time_to_unix(m[1])
                             task_id = int(m[2])
-                            if task_id not in htex_task_to_uuid:
-                                htex_task_span_uuid = str(uuid.uuid4())
-                                htex_task_to_uuid[task_id] = htex_task_span_uuid
-                                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
-                            else:
-                                htex_task_span_uuid = htex_task_to_uuid[task_id]
+
+                            htex_task_span_uuid = local_key_to_span_uuid(
+                                cursor = dnpc_cursor,
+                                local_key = task_id,
+                                namespace = htex_task_to_uuid,
+                                span_type = 'parsl.executor.htex.task',
+                                description = 'from inerchange.log')
 
                             store_event(cursor=dnpc_cursor,
                                         span_uuid=htex_task_span_uuid,
@@ -438,13 +448,13 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         if m:
                             event_time = logfile_time_to_unix(m[1])
                             task_id = int(m[2])
-                            if task_id not in htex_task_to_uuid:
-                                htex_task_span_uuid = str(uuid.uuid4())
-                                htex_task_to_uuid[task_id] = htex_task_span_uuid
-                                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
-                            else:
-                                htex_task_span_uuid = htex_task_to_uuid[task_id]
 
+                            htex_task_span_uuid = local_key_to_span_uuid(
+                                cursor = dnpc_cursor,
+                                local_key = task_id,
+                                namespace = htex_task_to_uuid,
+                                span_type = 'parsl.executor.htex.task',
+                                description = 'from interchange.log')
 
                             store_event(cursor=dnpc_cursor,
                                         span_uuid=htex_task_span_uuid,
@@ -457,12 +467,13 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         if m:
                             event_time = logfile_time_to_unix(m[1])
                             task_id = int(m[2])
-                            if task_id not in htex_task_to_uuid:
-                                htex_task_span_uuid = str(uuid.uuid4())
-                                htex_task_to_uuid[task_id] = htex_task_span_uuid
-                                dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (htex_task_span_uuid, 'parsl.executor.htex.task', 'from interchange.log'))
-                            else:
-                                htex_task_span_uuid = htex_task_to_uuid[task_id]
+
+                            htex_task_span_uuid = local_key_to_span_uuid(
+                                cursor = dnpc_cursor,
+                                local_key = task_id,
+                                namespace = htex_task_to_uuid,
+                                span_type = 'parsl.executor.htex.task',
+                                description = 'from interchange.log')
 
                             store_event(cursor=dnpc_cursor,
                                         span_uuid=htex_task_span_uuid,
@@ -524,23 +535,23 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
                 k = (span_type, span_id)
 
-                # this bit handles the implicitness of span existence in
-                # parsl_tracing
-                if k not in tracing_span_uuids:
-                    span_uuid = str(uuid.uuid4())
-                    tracing_span_uuids[k] = span_uuid
-                    db_span_type = "parsl.tracing." + span_type
-                    dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (span_uuid, db_span_type, 'imported from parsl_tracing'))
+                span_uuid = local_key_to_span_uuid(
+                    cursor = dnpc_cursor,
+                    local_key = k,
+                    namespace = tracing_span_uuids,
+                    span_type = "parsl.tracing." + span_type,
+                    description = "imported from parsl_tracing")
 
-                    # TODO: also do this for tasks added at bind level...
-                    # eg by factoring out this block.
-                    if span_type == "TASK":
-                        tracing_task_id = span_id
-                        print(f"Found tracing TASK with ID {tracing_task_id}")
-                        tracing_task_to_uuid[tracing_task_id] = span_uuid
-                else:
-                    span_uuid = tracing_span_uuids[k]
-   
+                # can this be inferred later on in a binding stage
+                # because the keys of tracing_span_uuids already
+                # contain this information? it would split more nicely along
+                # the importer A / importer B / binder A<->B modularisation
+                # idea?
+                if span_type == "TASK":
+                    tracing_task_id = span_id
+                    print(f"Found tracing TASK with ID {tracing_task_id}")
+                    tracing_task_to_uuid[tracing_task_id] = span_uuid
+
                 store_event(cursor=dnpc_cursor,
                             span_uuid=span_uuid,
                             event_time=event_time,
@@ -554,23 +565,23 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 sub_id = b[3]
 
                 super_k = (super_type, super_id)
-                if super_k not in tracing_span_uuids:
-                    super_uuid = str(uuid.uuid4())
-                    tracing_span_uuids[super_k] = super_uuid
-                    db_span_type = "parsl.tracing." + super_type
-                    dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (super_uuid, db_span_type, 'imported from parsl_tracing event'))
-                else:
-                    super_uuid = tracing_span_uuids[super_k]
+
+                super_uuid = local_key_to_span_uuid(
+                    cursor = dnpc_cursor,
+                    local_key = super_k,
+                    namespace = tracing_span_uuids,
+                    span_type = "parsl.tracing." + super_type,
+                    description = "imported from parsl_tracing"
+                   )
 
                 sub_k = (sub_type, sub_id)
-                if sub_k not in tracing_span_uuids:
-                    sub_uuid = str(uuid.uuid4())
-                    tracing_span_uuids[super_k] = sub_uuid
-                    db_span_type = "parsl.tracing." + sub_type
-                    dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (sub_uuid, db_span_type, 'imported from parsl_tracing bind'))
-                else:
-                    sub_uuid = tracing_span_uuids[sub_k]
 
+                sub_uuid = local_key_to_span_uuid(
+                    cursor = dnpc_cursor,
+                    local_key = sub_k,
+                    namespace = tracing_span_uuids,
+                    span_type = "parsl.tracing." + sub_type,
+                    description = "imported from parsl_tracing")
 
                 dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (super_uuid, sub_uuid, str((sub_type, sub_id))))
 
@@ -605,3 +616,30 @@ def logfile_time_to_unix(s: str) -> float:
     """Converts a parsl logfile timestamp like 2023-03-06 11:20:17.282
     to a unix time"""
     return datetime.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%f").timestamp()
+
+
+X = TypeVar('X')
+
+def local_key_to_span_uuid(*,
+                           cursor,
+                           local_key: X,
+                           namespace: Dict[X, str],
+                           span_type: str,
+                           description: str) -> str:
+    """Makes sure a span exists for given key. If the key is in namespace
+    already, the span uuid is returned, like a regular dictionary lookup in
+    the namespace. If it is not in the namespace, a new span is generated and
+    inserted into the database.
+    Repeatedly calling local_key_to_span_uuid with the same local_key and
+    namespace will always return the same span uuid, which will be present in
+    the span table of the database.
+    """
+
+    if local_key not in namespace:
+        span_uuid = str(uuid.uuid4())
+        namespace[local_key] = span_uuid
+        cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (span_uuid, span_type, description))
+    else:
+        span_uuid = namespace[local_key]
+
+    return span_uuid
