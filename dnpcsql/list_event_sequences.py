@@ -5,6 +5,8 @@
 import itertools
 import sqlite3
 
+from typing import Any, List, Dict
+
 if __name__ == "__main__":
 
     query = """
@@ -45,10 +47,10 @@ order by root_span_uuid, event.time;
     groups = itertools.groupby(rows, lambda r: r[0])
 
     hash_counts = {}
-    hash_sequences = {}
+    hash_sequences: Dict[int, List[Any]] = {}
 
-    for (root_span_uuid, events) in groups:
-      events = list(events)
+    for (root_span_uuid, events_iterator) in groups:
+      events = list(events_iterator)
       hash_material = ""
       print(f"Root span uuid {root_span_uuid}:")
       for e in events:
@@ -104,7 +106,7 @@ order by root_span_uuid, event.time;
 
     print("Mean times for most common event sequence (cumul, inter-event)")
     n=0
-    c=0
+    c: float = 0
     for e in example_events:
       event_time=e[1]
       span_type=e[2]
