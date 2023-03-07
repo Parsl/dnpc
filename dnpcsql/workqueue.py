@@ -4,7 +4,7 @@ import uuid
 
 from typing import Dict
 
-from dnpcsql.importerlib import store_event
+from dnpcsql.importerlib import local_key_to_span_uuid, store_event
 
 def import_all(db: sqlite3.Connection, transaction_log_path) -> Dict[str, str]:
     """Imports tasks from transaction_log and returns a dict that maps
@@ -41,17 +41,14 @@ def import_all(db: sqlite3.Connection, transaction_log_path) -> Dict[str, str]:
                 print(m[3])
 
                 wq_task_id = m[2]
-                if wq_task_id not in task_to_span_map:
-                    span_id = str(uuid.uuid4())
-                    task_to_span_map[wq_task_id] = span_id
-                    print(f"New task {wq_task_id} - create span {span_id}")
-                    cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (span_id, 'workqueue.task', 'Work Queue TASK from transaction_log'))
 
+                span_id = local_key_to_span_uuid(
+                    cursor = cursor,
+                    local_key = wq_task_id,
+                    namespace = task_to_span_map,
+                    span_type = 'workqueue.task',
+                    description = 'Work Queue TASK from transaction_log')
  
-                else:
-                    span_id = task_to_span_map[wq_task_id]
-                    print(f"Existing task {wq_task_id} with span {span_id}")
-
                 unix_time = float(m[1]) / 1000000.0
 
                 store_event(cursor=cursor,
