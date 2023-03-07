@@ -571,8 +571,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                     local_key = super_k,
                     namespace = tracing_span_uuids,
                     span_type = "parsl.tracing." + super_type,
-                    description = "imported from parsl_tracing"
-                   )
+                    description = "imported from parsl_tracing")
 
                 sub_k = (sub_type, sub_id)
 

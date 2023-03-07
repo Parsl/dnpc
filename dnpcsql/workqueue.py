@@ -26,7 +26,7 @@ def import_all(db: sqlite3.Connection, transaction_log_path) -> Dict[str, str]:
 
     cre = re.compile('([0-9]+) [0-9]+ TASK ([0-9]+) ([^ ]+) .*')
 
-    task_to_span_map = {}
+    task_to_span_map: Dict[str, str] = {}
 
     cursor = db.cursor()
 
