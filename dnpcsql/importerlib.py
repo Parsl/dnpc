@@ -1,3 +1,4 @@
+import datetime
 import uuid
 
 from typing import Dict, TypeVar
@@ -44,3 +45,9 @@ def store_event(*,
                     event_type,
                     description)
                    )
+
+
+def logfile_time_to_unix(s: str) -> float:
+    """Converts a parsl logfile timestamp like 2023-03-06 11:20:17.282
+    to a unix time"""
+    return datetime.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%f").timestamp()
