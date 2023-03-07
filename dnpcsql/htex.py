@@ -1,11 +1,13 @@
 import os
 import re
 
+from typing import Dict
+
 from dnpcsql.importerlib import local_key_to_span_uuid, logfile_time_to_unix, store_event
 
 def import_htex(*,
-    cursor,
-    rundir: str):
+                cursor,
+                rundir: str):
 
     # look for htex logs
     # right now using a hard-coded executor name
@@ -18,7 +20,7 @@ def import_htex(*,
     # That doesn't need to happen inside the parsl importer, but suggests
     # that the htex importer should be a separate module.
 
-    htex_task_to_uuid = {}
+    htex_task_to_uuid: Dict[int, str] = {}
 
     executor_label = "htex_Local"
 
