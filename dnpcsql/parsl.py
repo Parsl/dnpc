@@ -324,7 +324,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                     if m:
                         event_time = datetime.datetime.strptime(m[1], "%Y-%m-%d %H:%M:%S.%f").timestamp()
                         tasklist = m[2]
-                        # this assumes that there's only one task in the task list
+                        # TODO: this assumes that there's only one task in the task list
                         # which won't work except in serialised use cases - an exception
                         # will be raised here and you can read this comment and implement
                         # a suitable parse/for loop or change the interchange log
