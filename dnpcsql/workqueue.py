@@ -26,6 +26,9 @@ def import_all(db: sqlite3.Connection, transaction_log_path) -> Dict[str, str]:
 
     task_re = re.compile('([0-9]+) [0-9]+ TASK ([0-9]+) ([^ ]+) .*')
 
+    # time manager_pid TRANSFER (INPUT|OUTPUT) taskid cache_flag sizeinmb walltime filename
+    transfer_re = re.compile('([0-9]+) [0-9]+ TRANSFER ([^ ]+) ([0-9]+) ([^ ]+) .*')
+
     task_to_span_map: Dict[str, str] = {}
 
     cursor = db.cursor()
@@ -57,6 +60,29 @@ def import_all(db: sqlite3.Connection, transaction_log_path) -> Dict[str, str]:
                             event_type=m[3],
                             description='Event from transaction_log'
                            )
+            m = transfer_re.match(line)
+            if m:
+                wq_task_id = m[3]
+
+                span_id = local_key_to_span_uuid(
+                    cursor = cursor,
+                    local_key = wq_task_id,
+                    namespace = task_to_span_map,
+                    span_type = 'workqueue.task',
+                    description = 'Work Queue TASK from transaction_log')
+ 
+                unix_time = float(m[1]) / 1000000.0
+
+                store_event(cursor=cursor,
+                            span_uuid=span_id,
+                            event_time=unix_time,
+                            event_type="TRANSFER_"+m[2],
+                            description='Event from transaction_log'
+                           )
+
+
+
+
     db.commit() 
     print("done importing from work_queue")
     return task_to_span_map
