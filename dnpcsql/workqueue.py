@@ -24,7 +24,7 @@ def import_all(db: sqlite3.Connection, transaction_log_path) -> Dict[str, str]:
     # moment, but this will need to happen somehow to eg tie into the
     # relevant parsl-level task spans)
 
-    cre = re.compile('([0-9]+) [0-9]+ TASK ([0-9]+) ([^ ]+) .*')
+    task_re = re.compile('([0-9]+) [0-9]+ TASK ([0-9]+) ([^ ]+) .*')
 
     task_to_span_map: Dict[str, str] = {}
 
@@ -33,7 +33,7 @@ def import_all(db: sqlite3.Connection, transaction_log_path) -> Dict[str, str]:
     with open(transaction_log_path, "r") as logfile:
         for line in logfile:
             print(line)
-            m = cre.match(line)
+            m = task_re.match(line)
             if m:
                 print(m)
                 print(m[1])
