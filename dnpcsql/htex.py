@@ -89,8 +89,19 @@ def import_htex(*,
 
     manager_dirs = [d for (d,df,ff) in os.walk(f"{rundir}/{executor_label}") if "manager.log" in ff]
 
+    manager_id_to_uuid: Dict[str, str] = {}
+
     for manager_dir in manager_dirs:
         print(f"Processing manager directory {manager_dir}")
+
+        manager_id = os.path.basename(manager_dir)
+
+        manager_span_uuid = local_key_to_span_uuid(
+            cursor = cursor,
+            local_key = manager_id,
+            namespace = manager_id_to_uuid,
+            span_type = 'parsl.executor.htex.manager',
+            description = 'from manager directory')
 
         manager_filename = f"{manager_dir}/manager.log"
         print(f"looking for: {manager_filename}")
@@ -116,6 +127,9 @@ def import_htex(*,
                                         event_time=event_time,
                                         event_type='manager_got_task',
                                         description='from manager.log')
+                            cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)",
+                                (manager_span_uuid,
+                                htex_task_span_uuid, task_id))
 
         else:
             raise RuntimeError("manager log was not found in manager directory")
@@ -133,7 +147,28 @@ def import_htex(*,
 
         worker_logs = [f for f in os.listdir(manager_dir) if f.startswith("worker_")]
 
+        # this namespace is per-manager, because workers are identified by
+        # integers which are only unique within a manager.
+        worker_id_to_uuid: Dict[str, str] = {}
+
         for worker_filename in worker_logs:
+
+            # TODO:
+            # lazily using the worker log filename, rather than
+            # pulling out the integer worker number
+            worker_id = os.path.basename(worker_filename)
+
+            worker_span_uuid = local_key_to_span_uuid(
+                cursor = cursor,
+                local_key = worker_id,
+                namespace = worker_id_to_uuid,
+                span_type = 'parsl.executor.htex.worker',
+                description = 'from worker_*.log')
+
+            cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)",
+                (manager_span_uuid,
+                worker_span_uuid, worker_id))
+
             with open(f"{manager_dir}/{worker_filename}", "r") as f:
                 for log_line in f.readlines():
                     m = re_worker_received_task.match(log_line)
@@ -153,6 +188,10 @@ def import_htex(*,
                                     event_time=event_time,
                                     event_type='worker_received_task',
                                     description='from worker_*.log')
+
+                        cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)",
+                            (worker_span_uuid,
+                            htex_task_span_uuid, task_id))
 
                     m = re_worker_completed_task.match(log_line)
                     if m:
