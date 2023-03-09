@@ -20,7 +20,9 @@ def import_htex(*,
     # That doesn't need to happen inside the parsl importer, but suggests
     # that the htex importer should be a separate module.
 
-    htex_task_to_uuid: Dict[int, str] = {}
+    htex_interchange_task_to_uuid: Dict[int, str] = {}
+    htex_manager_task_to_uuid: Dict[int, str] = {}
+    htex_worker_task_to_uuid: Dict[int, str] = {}
 
     executor_label = "htex_Local"
 
@@ -46,8 +48,8 @@ def import_htex(*,
                         htex_task_span_uuid = local_key_to_span_uuid(
                             cursor = cursor,
                             local_key = task_id,
-                            namespace = htex_task_to_uuid,
-                            span_type = 'parsl.executor.htex.task',
+                            namespace = htex_interchange_task_to_uuid,
+                            span_type = 'parsl.executor.htex.interchange.task',
                             description = 'from interchange.log')
 
                         store_event(cursor=cursor,
@@ -64,8 +66,8 @@ def import_htex(*,
                     htex_task_span_uuid = local_key_to_span_uuid(
                         cursor = cursor,
                         local_key = task_id,
-                        namespace = htex_task_to_uuid,
-                        span_type = 'parsl.executor.htex.task',
+                        namespace = htex_interchange_task_to_uuid,
+                        span_type = 'parsl.executor.htex.interchange.task',
                         description = 'from interchange.log')
 
                     store_event(cursor=cursor,
@@ -105,9 +107,9 @@ def import_htex(*,
                             htex_task_span_uuid = local_key_to_span_uuid(
                                 cursor = cursor,
                                 local_key = task_id,
-                                namespace = htex_task_to_uuid,
-                                span_type = 'parsl.executor.htex.task',
-                                description = 'from interchange.log')
+                                namespace = htex_manager_task_to_uuid,
+                                span_type = 'parsl.executor.htex.manager.task',
+                                description = 'from manager.log')
 
                             store_event(cursor=cursor,
                                         span_uuid=htex_task_span_uuid,
@@ -142,9 +144,9 @@ def import_htex(*,
                         htex_task_span_uuid = local_key_to_span_uuid(
                             cursor = cursor,
                             local_key = task_id,
-                            namespace = htex_task_to_uuid,
-                            span_type = 'parsl.executor.htex.task',
-                            description = 'from inerchange.log')
+                            namespace = htex_worker_task_to_uuid,
+                            span_type = 'parsl.executor.htex.worker.task',
+                            description = 'from worker_*.log')
 
                         store_event(cursor=cursor,
                                     span_uuid=htex_task_span_uuid,
@@ -160,8 +162,8 @@ def import_htex(*,
                         htex_task_span_uuid = local_key_to_span_uuid(
                             cursor = cursor,
                             local_key = task_id,
-                            namespace = htex_task_to_uuid,
-                            span_type = 'parsl.executor.htex.task',
+                            namespace = htex_worker_task_to_uuid,
+                            span_type = 'parsl.executor.htex.worker.task',
                             description = 'from interchange.log')
 
                         store_event(cursor=cursor,
@@ -179,13 +181,31 @@ def import_htex(*,
                         htex_task_span_uuid = local_key_to_span_uuid(
                             cursor = cursor,
                             local_key = task_id,
-                            namespace = htex_task_to_uuid,
-                            span_type = 'parsl.executor.htex.task',
-                            description = 'from interchange.log')
+                            namespace = htex_worker_task_to_uuid,
+                            span_type = 'parsl.executor.htex.worker.task',
+                            description = 'from worker_*.log')
 
                         store_event(cursor=cursor,
                                     span_uuid=htex_task_span_uuid,
                                     event_time=event_time,
                                     event_type='worker_all_finished_task',
                                     description='from worker_*.log')
-    return htex_task_to_uuid
+
+    # now make span bindings: all spans the should be bound together use the
+    # same htex task ID, so scan all of those:
+
+    all_task_ids = set(htex_interchange_task_to_uuid.keys())
+    all_task_ids |= htex_manager_task_to_uuid.keys()
+    all_task_ids |= htex_worker_task_to_uuid.keys()
+
+    for task_id in all_task_ids:
+        if task_id in htex_interchange_task_to_uuid and task_id in htex_manager_task_to_uuid:
+            cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)",
+                (htex_interchange_task_to_uuid[task_id],
+                htex_manager_task_to_uuid[task_id], task_id))
+        if task_id in htex_manager_task_to_uuid and task_id in htex_worker_task_to_uuid:
+            cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)",
+                (htex_manager_task_to_uuid[task_id],
+                htex_worker_task_to_uuid[task_id], task_id))
+
+    return htex_interchange_task_to_uuid
