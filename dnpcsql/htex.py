@@ -39,25 +39,22 @@ def import_htex(*,
                 if m:
                     event_time = logfile_time_to_unix(m[1])
                     tasklist = m[2]
-                    # TODO: this assumes that there's only one task in the task list
-                    # which won't work except in serialised use cases - an exception
-                    # will be raised here and you can read this comment and implement
-                    # a suitable parse/for loop or change the interchange log
-                    # message.
-                    task_id = int(tasklist)
+                    tasks = tasklist.split(", ")
+                    for task in tasks:
+                        task_id = int(task)
 
-                    htex_task_span_uuid = local_key_to_span_uuid(
-                        cursor = cursor,
-                        local_key = task_id,
-                        namespace = htex_task_to_uuid,
-                        span_type = 'parsl.executor.htex.task',
-                        description = 'from interchange.log')
+                        htex_task_span_uuid = local_key_to_span_uuid(
+                            cursor = cursor,
+                            local_key = task_id,
+                            namespace = htex_task_to_uuid,
+                            span_type = 'parsl.executor.htex.task',
+                            description = 'from interchange.log')
 
-                    store_event(cursor=cursor,
-                                span_uuid=htex_task_span_uuid,
-                                event_time=event_time,
-                                event_type='interchange_to_manager',
-                                description='from interchange.log')
+                        store_event(cursor=cursor,
+                                    span_uuid=htex_task_span_uuid,
+                                    event_time=event_time,
+                                    event_type='interchange_to_manager',
+                                    description='from interchange.log')
 
                 m = re_interchange_removing_task.match(log_line)
                 if m:
@@ -101,20 +98,22 @@ def import_htex(*,
                     m = re_manager_got_tasks.match(log_line)
                     if m:
                         event_time = logfile_time_to_unix(m[1])
-                        task_id = int(m[2])
+                        task_ids = m[2]
+                        for t in task_ids.split(", "):
+                            task_id = int(t)
 
-                        htex_task_span_uuid = local_key_to_span_uuid(
-                            cursor = cursor,
-                            local_key = task_id,
-                            namespace = htex_task_to_uuid,
-                            span_type = 'parsl.executor.htex.task',
-                            description = 'from interchange.log')
+                            htex_task_span_uuid = local_key_to_span_uuid(
+                                cursor = cursor,
+                                local_key = task_id,
+                                namespace = htex_task_to_uuid,
+                                span_type = 'parsl.executor.htex.task',
+                                description = 'from interchange.log')
 
-                        store_event(cursor=cursor,
-                                    span_uuid=htex_task_span_uuid,
-                                    event_time=event_time,
-                                    event_type='manager_got_task',
-                                    description='from manager.log')
+                            store_event(cursor=cursor,
+                                        span_uuid=htex_task_span_uuid,
+                                        event_time=event_time,
+                                        event_type='manager_got_task',
+                                        description='from manager.log')
 
         else:
             raise RuntimeError("manager log was not found in manager directory")
