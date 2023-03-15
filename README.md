@@ -158,3 +158,8 @@ on subsequent uses, only:
 
 module load python3
 conda activate dnpcsql-analysis
+
+
+See also
+========
+https://github.com/dwreeves/dbt_linreg - linear regression in SQL - this is an example of using templating/libraries to make an SQL/hybrid DSL, which might be an interesting path forwards for query writing.
