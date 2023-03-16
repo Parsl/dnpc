@@ -166,7 +166,29 @@ on subsequent uses, only:
 module load python3
 conda activate dnpcsql-analysis
 
+## Example usage of commandline tools
 
-See also
-========
+```
+# Remove existing DB
+$ rm dnpc.sqlite3
+
+# Import a runinfo directory
+$ python3 -m dnpcsql.import_parsl_runinfo ~/parsl/src/parsl/runinfo
+
+# See which span types have been imported
+
+$ python3 -m dnpcsql.list_span_types
+parsl.monitoring.workflow
+parsl.monitoring.task
+parsl.monitoring.try
+workqueue.task
+workqueue.worker
+
+# List most common sequence of events
+$ python3 -m dnpcsql.list_event_sequences
+... verbose output ...
+```
+
+## See also
+
 https://github.com/dwreeves/dbt_linreg - linear regression in SQL - this is an example of using templating/libraries to make an SQL/hybrid DSL, which might be an interesting path forwards for query writing.
