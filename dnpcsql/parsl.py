@@ -303,6 +303,11 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                           print("Match")
                           event_time=m[1]
                           event_type=m[2]
+
+                          # These events are extremely noisy and not so
+                          # interesting so avoid importing them.
+                          # TODO: perhaps avoiding these should be done
+                          # at the query level?
                           if event_type.startswith("META_PATH "):
                             continue
 
