@@ -1,17 +1,21 @@
 import sqlite3
+import sys
 import dnpcsql.parsl
 import dnpcsql.workqueue
 import dnpcsql.twoevents as twoev
 from dnpcsql.schema import create_tables
 
 def main() -> None:
-    print("dnpcsql parsl importer")
+    print("dnpcsql parsl runinfo importer")
+
+    runinfo=sys.argv[1]
+    print(f"Will import from runinfo: {runinfo}")
 
     connection = init_sql()
 
     create_tables(connection)
 
-    dnpcsql.parsl.import_all(connection, runinfo="/home/benc/parsl/src/parsl/runinfo/")
+    dnpcsql.parsl.import_all(connection, runinfo=runinfo)
 
     connection.commit()
     connection.close()
