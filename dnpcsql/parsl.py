@@ -207,7 +207,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             # 1668431173.633931 2022-11-14 05:06:13 WorkQueue-Submit-Process-60316 MainThread-140737354053440 parsl.executors.workqueue.executor:1007 _work_queue_submit_wait DEBUG: Completed WorkQueue task 3047, parsl executor task 3046
             re_wq_compl = re.compile('([^ ]+) .* _work_queue_submit_wait .* Completed WorkQueue task ([0-9]+),.*$')
 
-            wq_task_bindings = dnpcsql.workqueue.import_all(dnpc_db, wq_tl_filename)
+            wq_task_to_uuid = dnpcsql.workqueue.import_all(dnpc_db, wq_tl_filename)
 
             # now (via the wq executor task id) bind these together.
             # perhaps it would simplify things to make the in-parsl
@@ -224,11 +224,17 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             parsl_log_filename = f"{rundir}/parsl.log"
             with open(parsl_log_filename, "r") as parsl_log:
                 for parsl_log_line in parsl_log:
+
+                    # this section binds an executor task to its containing
+                    # parsl task.
                     m = re_parsl_log_bind_task.match(parsl_log_line)
                     if m and m[3] == executor_label:
                         task_try_id = (int(m[1]), int(m[2]))
                         wqe_id = m[4]
                         task_try_to_wqe[task_try_id] = wqe_id
+
+                    # this section binds a work queue task to its containing
+                    # executor task
 
                     # try first form of log line, and if that doesn't match
                     # fall through to the second style (in the form of an
@@ -245,14 +251,14 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                     if m:
                         e_time = m[1]
                         wq_id = m[2]
-                        wq_span_uuid = wq_task_bindings[wq_id]
+                        wqe_span_uuid = wq_task_to_uuid[wq_id]
 
                         # TODO: this isn't part of the Work Queue level TASK so it should
                         # form part of the event span of the work queue executor task
                         # submission.
 
                         store_event(cursor=dnpc_cursor,
-                                    span_uuid=wq_span_uuid,
+                                    span_uuid=wqe_span_uuid,
                                     event_time=e_time,
                                     event_type='WQE_completed',
                                     description='parsl.log entry for WQ Executor submit thread observing completion')
@@ -265,7 +271,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 try_span_uuid = task_try_to_uuid[task_try_id]
                 wqe_id = task_try_to_wqe[task_try_id]
                 wq_id = wqe_to_wq[wqe_id]
-                wq_span_uuid = wq_task_bindings[wq_id]
+                wq_span_uuid = wq_task_to_uuid[wq_id]
                 print(f"map try span {try_span_uuid} to wq task span {wq_span_uuid}")
 
                 # make a subspan relation that makes the wq task span
@@ -307,7 +313,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                                       description='parsl wq remote task log entry')
 
                     wq_id = wqe_to_wq[wqe_id]
-                    wq_span_uuid = wq_task_bindings[wq_id]
+                    wq_span_uuid = wq_task_to_uuid[wq_id]
                     dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (wq_span_uuid, wqe_task_log_span_uuid, "parsl.executors.wq.task.remote"))
 
             dnpc_db.commit()
