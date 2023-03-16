@@ -205,7 +205,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             re_wqe_to_wq_2 = re.compile('.* Executor task ([0-9]+) submitted to Work Queue with Work Queue task id ([0-9]+).*')
 
             # 1668431173.633931 2022-11-14 05:06:13 WorkQueue-Submit-Process-60316 MainThread-140737354053440 parsl.executors.workqueue.executor:1007 _work_queue_submit_wait DEBUG: Completed WorkQueue task 3047, parsl executor task 3046
-            re_wq_compl = re.compile('([^ ]+) .* _work_queue_submit_wait .* Completed WorkQueue task ([0-9]+),.*$')
+            re_wq_compl = re.compile('([^ ]+) .* _work_queue_submit_wait .* Completed WorkQueue task [0-9]+, parsl task ([0-9]+).*$')
 
             wq_task_to_uuid = dnpcsql.workqueue.import_all(dnpc_db, wq_tl_filename)
 
@@ -221,6 +221,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
             task_try_to_wqe = {}
             wqe_to_wq = {}
+            wqe_task_to_uuid = {}
             parsl_log_filename = f"{rundir}/parsl.log"
             with open(parsl_log_filename, "r") as parsl_log:
                 for parsl_log_line in parsl_log:
@@ -247,20 +248,23 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         wqe_id = m[1]
                         wq_id = m[2]
                         wqe_to_wq[wqe_id] = wq_id
+
                     m = re_wq_compl.match(parsl_log_line)
                     if m:
                         e_time = m[1]
-                        wq_id = m[2]
-                        wqe_span_uuid = wq_task_to_uuid[wq_id]
-
-                        # TODO: this isn't part of the Work Queue level TASK so it should
-                        # form part of the event span of the work queue executor task
-                        # submission.
+                        wqe_id = m[2]
+                        print("wq executor level event for wqe id {wqe_id}")
+                        wqe_span_uuid = local_key_to_span_uuid(
+                            cursor = dnpc_cursor,
+                            local_key = wqe_id,
+                            namespace = wqe_task_to_uuid,
+                            span_type = 'parsl.executors.workqueue.executor_task',
+                            description = "WorkQueueExecutor task from parsl.log")
 
                         store_event(cursor=dnpc_cursor,
                                     span_uuid=wqe_span_uuid,
                                     event_time=e_time,
-                                    event_type='WQE_completed',
+                                    event_type='executor_completed',
                                     description='parsl.log entry for WQ Executor submit thread observing completion')
 
             print(f"task_try_to_wqe: {task_try_to_wqe}")
@@ -270,14 +274,17 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 print(f"pairing task_try_id {task_try_id} to Work Queue Executor task id {wqe_id}")
                 try_span_uuid = task_try_to_uuid[task_try_id]
                 wqe_id = task_try_to_wqe[task_try_id]
+                wqe_task_span_uuid = wqe_task_to_uuid[wqe_id]
+                dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (try_span_uuid, wqe_task_span_uuid, "parsl.executors.wq.task"))
+
                 wq_id = wqe_to_wq[wqe_id]
                 wq_span_uuid = wq_task_to_uuid[wq_id]
-                print(f"map try span {try_span_uuid} to wq task span {wq_span_uuid}")
+                print(f"Pairing Work Queue Executor task {wqe_task_span_uuid} to wq task span {wq_span_uuid}")
 
                 # make a subspan relation that makes the wq task span
                 # a subspan of the try
 
-                dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (try_span_uuid, wq_span_uuid, "parsl.executors.wq.task"))
+                dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (wqe_task_span_uuid, wq_span_uuid, "parsl.executors.wq.task"))
             dnpc_db.commit()
 
             # 1677161346.713548 META_PATH parsl.tests.test_regression.test_2555
