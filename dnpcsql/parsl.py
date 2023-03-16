@@ -104,7 +104,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         # the one most obviously represented by the key structure of the parsl
         # monitoring db is task->try
 
-        monitoring_task_to_uuid = {}
+        monitoring_task_to_uuid: Dict[int, str] = {}
         task_try_to_uuid = {}
         
         task_rows = list(monitoring_cursor.execute("SELECT task_id, task_time_invoked, task_time_returned FROM task WHERE run_id = ?", (run_id,)))
@@ -221,7 +221,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
             task_try_to_wqe = {}
             wqe_to_wq = {}
-            wqe_task_to_uuid = {}
+            wqe_task_to_uuid: Dict[str, str] = {}
             parsl_log_filename = f"{rundir}/parsl.log"
             with open(parsl_log_filename, "r") as parsl_log:
                 for parsl_log_line in parsl_log:
@@ -251,7 +251,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
                     m = re_wq_compl.match(parsl_log_line)
                     if m:
-                        e_time = m[1]
+                        e_time = float(m[1])
                         wqe_id = m[2]
                         print("wq executor level event for wqe id {wqe_id}")
                         wqe_span_uuid = local_key_to_span_uuid(
@@ -308,7 +308,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                         m = re_parsl_wq_task_log.match(log_line.strip())
                         if m:
                           print("Match")
-                          event_time=m[1]
+                          event_time=float(m[1])
                           event_type=m[2]
 
                           # These events are extremely noisy and not so

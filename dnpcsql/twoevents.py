@@ -72,7 +72,11 @@ def plot_kde(xdata, ydata, output_filename, start_name, end_name):
     k = scipy.stats.kde.gaussian_kde([xdata,ydata])
     nbins=300
     print("generate grid")
-    xi, yi = np.mgrid[xdata.min():xdata.max():nbins*1j, ydata.min():ydata.max():nbins*1j]
+
+    # TODO: investigate the type error that is ignored here:
+    # dnpcsql/twoevents.py:75: error: Slice index must be an integer or None  [misc]
+    xi, yi = np.mgrid[xdata.min():xdata.max():nbins*1j, ydata.min():ydata.max():nbins*1j]  # type: ignore
+
     print("flatten")
     zi = k(np.vstack([xi.flatten(), yi.flatten()]))
     print("plot colourmesh")
