@@ -5,7 +5,9 @@
 ## Motivation
 
 This project originates from work with the realtime monitoring
-component of [Parsl](https://parsl-project.org/).
+component of [Parsl](https://parsl-project.org/) and with trying to
+understand performance of larger systems where parsl is not the only
+major component.
 
 As a complement to Parsl's realtime, dashboard oriented monitoring
 system, this project is aimed at people who are comfortable
@@ -59,6 +61,11 @@ will correspond with exactly one executor level task execution. But that
 correspondence is not exact: what happens if a task is never executed? or
 if an application level task fails before it is even submitted to parsl?
 
+Spans can also be associated with other spans as "facets" of each other:
+for example, the parsl monitoring database and an in-development parsl
+performance event system independently present views of the "same" things,
+such as parsl tasks. Neither is a parent to each other.
+
 A span will have multiple events associated with it. For the purposes of
 dnpcsql, an event has a timestamp and a type. Usually there is at least
 a start and end event. Often the end event will describe how the
@@ -94,9 +101,9 @@ should look more like helper code, rather than pre-packaged analyses.
 Users are free to structure their database schema as they please. There are
 three different kinds of structure that have been used with dnpcsql so far:
 
-* span / event / subspan - one table represents all spans, regardless of type;
-another represents events in those spans; and a third represents
-subspan/superspan relationships. This is span/event type unaware.
+* span / event / subspan / facet - one table represents all spans, regardless
+of type; another represents events in those spans; and two more represent
+subspan/superspan and facet relationships. This is span/event type unaware.
 
 * Type-aware tables - eg. parsl monitoring.db, with a table for tasks, another
 table for tries, etc. Different columns in the database represent timestamps
