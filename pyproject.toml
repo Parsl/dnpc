@@ -1,7 +1,7 @@
 [project]
 name = "dnpcsql"
 version = "0"
-dependencies = ["matplotliB", "sqlalchemy", "scipy", "sqlalchemy-stubs", "pandas-stubs"]
+dependencies = ["matplotliB", "sqlalchemy", "scipy", "sqlalchemy-stubs", "pandas", "pandas-stubs"]
 
 [tool.setuptools]
 packages = ["dnpcsql"]
