@@ -7,33 +7,11 @@ import sqlite3
 
 from typing import Any, List, Dict
 
+import dnpcsql.queries as queries
+
 if __name__ == "__main__":
 
-    query = """
-with recursive
-
-  descs(root_span_uuid, span_uuid) as (
-    select span.uuid, span.uuid from span where span.type="parsl.monitoring.task"
-    union
-    select descs.root_span_uuid, subspan.subspan_uuid
-      from subspan, descs
-     where subspan.superspan_uuid = descs.span_uuid
-    union
-    select descs.root_span_uuid, facet.right_uuid
-     from facet, descs
-     where facet.left_uuid = descs.span_uuid
-    union
-    select descs.root_span_uuid, facet.left_uuid
-     from facet, descs
-     where facet.right_uuid = descs.span_uuid
-  )
-
-  select descs.root_span_uuid, event.time, span.type, event.type, event.uuid
-    from descs, span, event
-   where span.uuid = descs.span_uuid
-     and event.span_uuid = span.uuid
-order by root_span_uuid, event.time;
-    """
+    query = queries.events_for_root_span_type("parsl.monitoring.task")
 
     db_name = "dnpc.sqlite3"
     db = sqlite3.connect(db_name,
