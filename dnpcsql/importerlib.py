@@ -41,7 +41,7 @@ def store_event(*,
     cursor.execute("INSERT INTO event (uuid, span_uuid, time, type, note) VALUES (?, ?, ?, ?, ?)",
                    (event_uuid,
                     span_uuid,
-                    event_time,
+                    str(event_time),  # rather than sqlite3 doing it?
                     event_type,
                     description)
                    )
