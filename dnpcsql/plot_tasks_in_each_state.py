@@ -50,19 +50,31 @@ if __name__ == "__main__":
         print(f"==== group with root span uuid {g[0][0]}")
         g.sort(key=lambda r: r[1])
         last_event_name = None
+
+        started = False
         cut = False
         for (root_span_uuid, event_time, span_type, event_type, event_uuid) in g:
             event_name = span_type + "/" + event_type
 
+            should_start = True
+
+            # should_start = span_type == "workqueue.task" and event_type == "RUNNING"
+            # should_start = span_type == "parsl.wqexecutor.remote" and event_type == "LOADFUNCTION_LOADPICKLED_FUNCTION"
+
             should_cut = False
 
-            # should_cut = span_type == "parsl.monitoring.try" \
+
+            # should_cut1 = span_type == "parsl.monitoring.try" \
             #            and (event_type == "exec_done" or \
             #            event_type == "memo_done" or \
             #            event_type == "dep_fail" or \
             #            event_type == "failed") 
+            # sould_cut = should_cut1 or (span_type == "parsl.wqexecutor.remote" and event_type == "EXECUTEFUNCTION")
 
-            if cut:
+            if should_start:
+                started = True
+
+            if cut or not started:
                 pass
             elif should_cut and last_event_name:  # no more processing
                 print(f"reducing last event: {last_event_name}")
