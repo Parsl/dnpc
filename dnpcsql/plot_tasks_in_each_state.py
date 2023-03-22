@@ -48,10 +48,29 @@ if __name__ == "__main__":
 
     for g in groups:
         print(f"==== group with root span uuid {g[0][0]}")
+        g.sort(key=lambda r: r[1])
         last_event_name = None
+        cut = False
         for (root_span_uuid, event_time, span_type, event_type, event_uuid) in g:
             event_name = span_type + "/" + event_type
-            if last_event_name and last_event_name != event_name:
+
+            should_cut = False
+
+            # should_cut = span_type == "parsl.monitoring.try" \
+            #            and (event_type == "exec_done" or \
+            #            event_type == "memo_done" or \
+            #            event_type == "dep_fail" or \
+            #            event_type == "failed") 
+
+            if cut:
+                pass
+            elif should_cut and last_event_name:  # no more processing
+                print(f"reducing last event: {last_event_name}")
+                events.append( (last_event_name, float(event_time), -1) )
+                cut = True
+            elif should_cut:
+                cut = True
+            elif last_event_name and last_event_name != event_name:
                 print(f"reducing last event: {last_event_name}")
                 events.append( (last_event_name, float(event_time), -1) )
                 print(f"increasing next event: {event_name}")
@@ -84,12 +103,15 @@ if __name__ == "__main__":
     for (event_name, counter_events) in grouped_by_event_name:
         print(f"{event_name} has {len(counter_events)} counter-events")
         counter_events.sort(key=lambda r: r[1])
+        print(counter_events)
         accumulator = 0
         accumulated_changes = []
         for (event_name, event_time, delta) in counter_events:
+            print(f"{event_time}  {delta}")
             accumulator += delta
             accumulated_changes.append( (event_time, accumulator) )
             unified_x_axis_values.add(event_time)
+            assert accumulator >= 0, f"Event {event_name} count became negative at {event_time}"
 
         print(f"For event {event_name}, got accumulator: {accumulated_changes}")
         accumulated_changes_by_event_name[event_name] = accumulated_changes
