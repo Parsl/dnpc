@@ -270,6 +270,10 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             print(f"task_try_to_wqe: {task_try_to_wqe}")
             print(f"wqe_to_wq: {wqe_to_wq}")
 
+            assert len(wqe_to_wq) == len(task_try_to_wqe)
+            assert len(task_try_to_wqe) == len(wq_task_to_uuid)
+            assert len(wq_task_to_uuid) == len(wqe_task_to_uuid)
+
             for (task_try_id, wqe_id) in task_try_to_wqe.items():
                 print(f"pairing task_try_id {task_try_id} to Work Queue Executor task id {wqe_id}")
                 try_span_uuid = task_try_to_uuid[task_try_id]
