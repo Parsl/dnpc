@@ -205,7 +205,9 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             re_wqe_to_wq_2 = re.compile('.* Executor task ([0-9]+) submitted to Work Queue with Work Queue task id ([0-9]+).*')
 
             # 1668431173.633931 2022-11-14 05:06:13 WorkQueue-Submit-Process-60316 MainThread-140737354053440 parsl.executors.workqueue.executor:1007 _work_queue_submit_wait DEBUG: Completed WorkQueue task 3047, parsl executor task 3046
-            re_wq_compl = re.compile('([^ ]+) .* _work_queue_submit_wait .* Completed WorkQueue task [0-9]+, parsl task ([0-9]+).*$')
+            # .* here before task because log message changed to add the word executor for clarity
+            # but that isn't in master at time of writing.
+            re_wq_compl = re.compile('([^ ]+) .* _work_queue_submit_wait .* Completed WorkQueue task [0-9]+, parsl .*task ([0-9]+).*$')
 
             wq_task_to_uuid = dnpcsql.workqueue.import_all(dnpc_db, wq_tl_filename)
 
