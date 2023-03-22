@@ -138,10 +138,14 @@ if __name__ == "__main__":
     fig = plt.figure(figsize=(16, 10))
     ax = fig.add_subplot(1, 1, 1)
 
-    # ax.plot(sorted_unified_x_axis_values, new_accumulated_changes)
     ax.stackplot(sorted_unified_x_axis_values, list(accumulated_changes_by_event_name.values()), labels=list(accumulated_changes_by_event_name.keys()))   # , labels=labels, colors=colors, baseline=baseline)
-    ax.legend(loc='upper left')
+    ax.legend(loc='upper left', bbox_to_anchor=(1,1))
     plt.title(f"Root spans in which state over time")
+
+    # shrink the plot by 30% to give more room for usually wide labels
+    # https://stackoverflow.com/questions/4700614/how-to-put-the-legend-outside-the-plot
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
 
     plt.savefig("stacktemp.png")
 
