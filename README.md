@@ -1,40 +1,42 @@
 # dnpcsql
 
-(Distributed Nested Performance Contexts in SQL)
+Distributed Nested Performance Contexts in SQL
 
-## Motivation
+## Purpose
 
-This project originates from work with the realtime monitoring
-component of [Parsl](https://parsl-project.org/) and with trying to
-understand performance of larger systems where parsl is not the only
-major component.
+A toolkit for analysing performance data from various components
+when running large workflows with [Parsl](https://parsl-project.org/)
 
-As a complement to Parsl's realtime, dashboard oriented monitoring
-system, this project is aimed at people who are comfortable
-writing their own analyses of performance data (which is often the
-case as Parsl users tend to be scientific programmers); it is intended
-to support after-the-fact, non-realtime performance analyses, from
-multiple data sources (primarily log files of different components,
-the sqlite3 database of parsl monitoring information, but also for
-example, data coming from AWS cloudwatch as part of a funcX
-side-project)
+## Structure
 
-This project is also intended to support easy integration of new
-data sources - in the parsl use case, when new executor components
-are added, for example, or when closer investigation of performance
-of a particular block of code leads to ad-hoc throwaway measurements
-not intended to form part of the parsl mainline code.
+* An SQLite database with a basic schema
 
-## Database
+* Importers which take data from various components and populate the
+  database.
 
-This project emphasises using SQL/relational databases as the data model
-and storage system. It is not intended to be a different query system
-that happens to use SQL as a backend; instead, the main model should be:
-relational queries (primarily SQL) against relational data. That involves
-exposing warts on the relational model, rather than hiding them behind
-some other model.
+  Examples of importers: 
+  * Parsl monitoring database
+  * Work Queue transaction log files
+  * High Throughput Executor worker log files
+  * application-specific data
 
-## High level model and data flow
+  Hopefully it is straightforward to add new importers for new components,
+  sometimes for permanent uses, sometimes for ad-hoc measurements of some
+  particular feature.
+
+* Analysis code
+
+  Python and SQL code which makes interesting reports from the data in the
+  database. Some of this code will be for specific components, but some
+  reports can be generic across all components.
+
+  Some of this code is structured as command line tools.
+
+  Some is in Python libraries that is intended to be used in user's scripts
+  or notebooks.
+
+
+## Data model
 
 The basic object that is being analysed is a "span". This term comes
 from the distributed tracing/observability community. For example,
@@ -47,6 +49,12 @@ In the case of parsl, spans include things like: parsl level tasks,
 parsl level tries, entire parsl workflows, executor level execution attempts,
 batch provider blocks, executor level task executors, task executions on
 a particular worker.
+
+A span will have multiple events associated with it. For the purposes of
+dnpcsql, an event has a timestamp and a type. Usually there is at least
+a start and end event. Often the end event will describe how the
+span ended - for example, a failure event or successful completion
+event.
 
 At the application level above parsl, there might be spans that represent
 the entire execution of an application, and each individual component of an
@@ -66,23 +74,15 @@ for example, the parsl monitoring database and an in-development parsl
 performance event system independently present views of the "same" things,
 such as parsl tasks. Neither is a parent to each other.
 
-A span will have multiple events associated with it. For the purposes of
-dnpcsql, an event has a timestamp and a type. Usually there is at least
-a start and end event. Often the end event will describe how the
-span ended - for example, a failure event type or successful completion
-event type.
-
 ## Analysis flow
 
-An example flow for performance data looks like this:
+An flow for performance data might look like this:
 
-* stuff happens (that we will want to analyse the performance of) and
-events are logged in ad-hoc formats (because many components are used,
-this project cannot try to enforce a common reporting format or mechanism,
-and instead must accept data as it comes)
+* stuff happens in a workflow (that we will want to analyse the performance of)
+and events are logged in ad-hoc formats
 
 * dnpcsql users import revelant information about spans, from various
-sources, into an sqlite3 database (so far, usually called `dnpc.sqlite3`)
+sources, into the database
 
 * users get specific data from the database using SQL queries
 
@@ -154,17 +154,25 @@ See dnpcsql/twoevents.py for an example of this.
 
 ## Install
 
-At nersc:
+```
+pip3 install .
+```
 
-module load python3
+## Install at NERSC
+
+```
+module load python/3.9-anaconda-2021.11
 conda create --name dnpcsql-analysis python=3.10
 conda activate dnpcsql-analysis
 pip install .
+```
 
-on subsequent uses, only:
+On subsequent uses, only:
 
+```
 module load python3
 conda activate dnpcsql-analysis
+```
 
 ## Example usage of commandline tools
 
@@ -189,6 +197,46 @@ $ python3 -m dnpcsql.list_event_sequences
 ... verbose output ...
 ```
 
+## History
+
+This project originates from work with the realtime monitoring
+component of [Parsl](https://parsl-project.org/) and with trying to
+understand performance of larger systems where parsl is not the only
+major component.
+
+As a complement to Parsl's realtime, dashboard oriented monitoring
+system, this project is aimed at people who are comfortable
+writing their own analyses of performance data (which is often the
+case as Parsl users tend to be scientific programmers); it is intended
+to support after-the-fact, non-realtime performance analyses, from
+multiple data sources (primarily log files of different components,
+the sqlite3 database of parsl monitoring information, but also for
+example, data coming from AWS cloudwatch as part of a funcX
+side-project)
+
+## Non-goals
+
+... or areas that other people might be interested in poking at.
+
+* Non-SQL databases and query languages - for example, graph databases and
+  graph query languages. There's nothing here that is intimately tied to
+  SQL; for example, the first iteration of this project was an entirely
+  in-memory Python object collection.
+
+* realtime database update as a workflow progresses - experience with Parsl
+  has shown this to be expensive, and in the case of post-hoc performance,
+  an expense that doesn't need to be paid.
+
+* enforcing a common reporting format from components - this project has to
+  deal with data as it comes from the components (for example, a big log
+  file per run, a parsl monitoring database containing many workflows data,
+  many separate log files one per core), and it is the job of component
+  specific importers to understand these formats.
+
 ## See also
+
+http://netlogger.lbl.gov/ - NetLogger, a very similar project. Especially see
+NetLogger's logging best practices document:
+https://docs.google.com/document/d/1oeW_l_YgQbR-C_7R2cKl6eYBT5N4WSMbvz0AT6hYDvA/edit
 
 https://github.com/dwreeves/dbt_linreg - linear regression in SQL - this is an example of using templating/libraries to make an SQL/hybrid DSL, which might be an interesting path forwards for query writing.
