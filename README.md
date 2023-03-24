@@ -233,6 +233,9 @@ side-project)
   many separate log files one per core), and it is the job of component
   specific importers to understand these formats.
 
+* using a richer standardised data model (standard span or event types,
+  for example) for all components
+
 ## See also
 
 http://netlogger.lbl.gov/ - NetLogger, a very similar project. Especially see
