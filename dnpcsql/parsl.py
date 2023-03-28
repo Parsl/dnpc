@@ -169,11 +169,6 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         dnpc_db.commit()
         # now we've imported a workflow from the monitoring DB
         # is there related stuff to import?
-        # For now, that is just work queue task information, but this would
-        # also be the place to import 
-        # How can we tell when an executor has workqueue stuff to import?
-        # Let's assume that if there is a nnn/*/transaction_log file, then
-        # it should be imported.
 
         rows = list(monitoring_cursor.execute("SELECT rundir FROM workflow WHERE run_id == ?", (run_id,)))
         assert len(rows) == 1
