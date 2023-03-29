@@ -37,7 +37,7 @@ from typing import Dict, Tuple, TypeVar
 # multiple DFKs in a single parsl.log? which is actually
 # perhaps an LSST/DESC requirement)
 
-def import_all(db: sqlite3.Connection, runinfo: str):
+def import_rundir_root(db: sqlite3.Connection, runinfo: str):
     print("importing from parsl")
 
     import_monitoring_db(db, f"{runinfo}/monitoring.db")

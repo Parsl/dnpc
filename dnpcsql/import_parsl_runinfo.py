@@ -21,7 +21,7 @@ def main() -> None:
 
     create_tables(connection)
 
-    dnpcsql.parsl.import_all(connection, runinfo=runinfo)
+    dnpcsql.parsl.import_rundir_root(connection, runinfo=runinfo)
 
     connection.commit()
     connection.close()
