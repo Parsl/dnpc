@@ -48,7 +48,9 @@ def import_rundir_root(db: sqlite3.Connection, runinfo: str):
     # this can import a hierarchy of workflows/tasks/blocks/etc
     # if it exists
     import_monitoring_db(db, f"{runinfo}/monitoring.db")
-
+    # TODO: this should return a dict of workflow runid uuids
+    #        to data useful for facet joining
+    
     # separately, could import each rundir/NNN directory...
 
     # and then, for workflows which we know to be the same,
@@ -78,9 +80,11 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
     rows = list(monitoring_cursor.execute("SELECT run_id, time_began, time_completed FROM workflow"))
 
+    monitoring_workflow_to_uuid: Dict[str, str] = {}
+
     for row in rows:
         run_id = row[0]
-        print(f"Found workflow run_id {run_id} in monitoring database")
+        print(f"Found workflow run id {run_id} in monitoring database")
 
         # this should result in:
         # a span for the workflow, with up to two events, the beginning and
@@ -89,15 +93,17 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         # difference between a gone-away workflow and a workflow that
         # hasn't reported any activity for a while)
 
-        # this will trust UUID generation in parsl enough that the run_id
-        # can be used to name the workflow span.
-
-        dnpc_cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (run_id, 'parsl.monitoring.workflow', 'Workflow from parsl monitoring.db'))
+        workflow_span_uuid = local_key_to_span_uuid(
+                cursor = dnpc_cursor,
+                local_key = run_id,
+                namespace = monitoring_workflow_to_uuid,
+                span_type = 'parsl.monitoring.workflow',
+                description = "Workflow from parsl monitoring.db")
 
         start_time = db_time_to_unix(row[1])
 
         store_event(cursor=dnpc_cursor,
-                    span_uuid=run_id,
+                    span_uuid=workflow_span_uuid,
                     event_time=start_time,
                     event_type='began',
                     description='Start of workflow from parsl monitoring.db'
@@ -107,7 +113,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
             end_time = db_time_to_unix(row[2])
 
             store_event(cursor=dnpc_cursor,
-                        span_uuid=run_id,
+                        span_uuid=workflow_span_uuid,
                         event_time=end_time,
                         event_type='completed',
                         description='End of workflow from parsl monitoring.db'
@@ -141,7 +147,7 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
                 span_type = 'parsl.monitoring.task',
                 description = "Task from parsl monitoring.db")
 
-            dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (run_id, task_uuid, task_id))
+            dnpc_cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (workflow_span_uuid, task_uuid, task_id))
 
             invoked_time = db_time_to_unix(task_row[1])
 
