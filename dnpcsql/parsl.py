@@ -16,6 +16,7 @@ from typing import Dict, Tuple, TypeVar
 # The big ones are:
 # - monitoring.db
 # - */parsl.log
+# - DESC prototype tracing pickle file
 #
 # but there are also, for example, htex
 # interchange and worker logs, and workqueue
@@ -40,7 +41,23 @@ from typing import Dict, Tuple, TypeVar
 def import_rundir_root(db: sqlite3.Connection, runinfo: str):
     print("importing from parsl")
 
+    # in one rundir root, workflow information exists in two
+    # places: inside the root monitoring.db, and in individual
+    # runinfo/NNN directories, in various files.
+
+    # this can import a hierarchy of workflows/tasks/blocks/etc
+    # if it exists
     import_monitoring_db(db, f"{runinfo}/monitoring.db")
+
+    # separately, could import each rundir/NNN directory...
+
+    # and then, for workflows which we know to be the same,
+    # create facets at each level for every span type that
+    # we know exists in both forms.
+
+    # that would involve both the monitoring and rundir code
+    # returning enough id->span uuid mappings that a third
+    # step could perform that join.
 
     print("done importing from parsl")
 
@@ -186,10 +203,13 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
         tracing_task_to_uuid = import_individual_rundir(dnpc_db=dnpc_db, cursor=dnpc_cursor, rundir=rundir, task_try_to_uuid=task_try_to_uuid)
 
-        # TODO: it might not be appropriate to import this as a sub-activity of a monitoring.db workflow:
-        # the rundirs also need importing when there is no monitoring.db
-        # instead perhaps the rundirs should be imported alongside/in parallel to the monitorind db workflows,
-        # and joined together as part of the "joiner" idea that i didn't explicitly start with.
+        bind_monitoring_tracing_tasks(cursor=dnpc_cursor,
+                                      monitoring_task_to_uuid=monitoring_task_to_uuid, 
+                                      tracing_task_to_uuid=tracing_task_to_uuid)
+
+        dnpc_db.commit()
+
+def bind_monitoring_tracing_tasks(*, cursor, monitoring_task_to_uuid, tracing_task_to_uuid):
         # now tie together facets of the same entity from tracing and monitoring:
         # tasks
         # tries
@@ -208,9 +228,8 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
         for task_id in known_task_ids:
             if task_id in tracing_task_to_uuid and task_id in monitoring_task_to_uuid:
                 print(f"joining spans for task {task_id}")
-                dnpc_cursor.execute("INSERT INTO facet (left_uuid, right_uuid, note) VALUES (?, ?, ?)", (tracing_task_to_uuid[task_id], monitoring_task_to_uuid[task_id], "joined by importer"))
+                cursor.execute("INSERT INTO facet (left_uuid, right_uuid, note) VALUES (?, ?, ?)", (tracing_task_to_uuid[task_id], monitoring_task_to_uuid[task_id], "joined by importer"))
 
-        dnpc_db.commit()
 
 def import_individual_rundir(*, dnpc_db, cursor, task_try_to_uuid: Dict[Tuple[int, int], str], rundir: str) -> Dict[str, str]:
 
