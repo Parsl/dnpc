@@ -25,10 +25,14 @@ def get_data(query):
     rows = list(cursor.execute(query))
 
     print(f"there are {len(rows)} relevant status transitions in the db")
-    print(f"First row: {rows[0]}")
 
     xdata = np.array([float(x) for (x,y) in rows])
-    xdata = xdata - xdata.min()
+
+    # only normalise against minimum if the minimum actually exists:
+    # if there is no data, there won't be a minimum, because the
+    # arrays will be empty.
+    if len(rows) > 0:
+        xdata = xdata - xdata.min()
 
     ydata = np.array([float(y) for (x,y) in rows])
 
