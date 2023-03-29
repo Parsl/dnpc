@@ -47,6 +47,11 @@ def import_all(db: sqlite3.Connection, runinfo: str):
 def import_monitoring_db(dnpc_db, monitoring_db_name):
 
     print(f"importing from monitoring db: {monitoring_db_name}")
+
+    if not os.path.exists(monitoring_db_name):
+        print("monitoring.db does not exist - skipping monitoring.db import")
+        return
+
     monitoring_db = sqlite3.connect(monitoring_db_name,
                                     detect_types=sqlite3.PARSE_DECLTYPES |
                                     sqlite3.PARSE_COLNAMES)
