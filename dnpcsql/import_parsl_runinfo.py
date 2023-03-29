@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import sys
 import dnpcsql.parsl
@@ -10,6 +11,11 @@ def main() -> None:
 
     runinfo=sys.argv[1]
     print(f"Will import from runinfo: {runinfo}")
+
+    if os.path.exists("dnpc.sqlite3"):
+        print("Removing previous dnpcsql database")
+        os.remove("dnpc.sqlite3")
+
 
     connection = init_sql()
 
