@@ -459,6 +459,7 @@ def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflo
                 # which wouldn't cover all cases, but would cover some?
                 # or a helper which de-dupes.
                 cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (task_span_uuid, try_span_uuid, "rundir task try bind"))
+                cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (workflow_span_uuid, task_span_uuid, "rundir task try bind"))
 
                 wqe_id = task_try_to_wqe[task_try_id]
                 wqe_task_span_uuid = wqe_task_to_uuid[wqe_id]
