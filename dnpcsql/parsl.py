@@ -78,9 +78,9 @@ def import_rundir_root(*, db: sqlite3.Connection, runinfo: str):
         print(f"Binding monitoring and rundir spans for run id {run_id}")
         monitoring_task_to_uuid = [x.task_to_uuid for x in monitoring_imports if x.run_id == run_id][0]
         rundir_task_to_uuid = [x.task_to_uuid for x in rundir_imports if x.run_id == run_id][0]
-        bind_monitoring_tracing_tasks(cursor=cursor,
-                                      monitoring_task_to_uuid=monitoring_task_to_uuid, 
-                                      tracing_task_to_uuid=rundir_task_to_uuid)
+        bind_workflow_account_tasks(cursor=cursor,
+                                    left_task_to_uuid=monitoring_task_to_uuid, 
+                                    right_task_to_uuid=rundir_task_to_uuid)
 
     # and then, for workflows which we know to be the same,
     # create facets at each level for every span type that
@@ -245,7 +245,7 @@ def import_monitoring_db(dnpc_db, dnpc_cursor, monitoring_db_name) -> List[Impor
 
     return imported_workflows
 
-def bind_monitoring_tracing_tasks(*, cursor, monitoring_task_to_uuid, tracing_task_to_uuid):
+def bind_workflow_account_tasks(*, cursor, left_task_to_uuid, right_task_to_uuid):
         # now tie together facets of the same entity from tracing and monitoring:
         # tasks
         # tries
@@ -259,12 +259,12 @@ def bind_monitoring_tracing_tasks(*, cursor, monitoring_task_to_uuid, tracing_ta
         # could make the entity links (i.e. the DB would already contain the
         # relevant data in a different form?)
 
-        known_task_ids = set(list(tracing_task_to_uuid.keys()) + list(monitoring_task_to_uuid.keys()))
-        print(f"There are {len(known_task_ids)} known tasks, between monitoring and tracing") 
+        known_task_ids = set(list(left_task_to_uuid.keys()) + list(right_task_to_uuid.keys()))
+        print(f"There are {len(known_task_ids)} known tasks, between two workflow accounts") 
         for task_id in known_task_ids:
-            if task_id in tracing_task_to_uuid and task_id in monitoring_task_to_uuid:
+            if task_id in left_task_to_uuid and task_id in right_task_to_uuid:
                 print(f"joining spans for task {task_id}")
-                cursor.execute("INSERT INTO facet (left_uuid, right_uuid, note) VALUES (?, ?, ?)", (tracing_task_to_uuid[task_id], monitoring_task_to_uuid[task_id], "joined by importer"))
+                cursor.execute("INSERT INTO facet (left_uuid, right_uuid, note) VALUES (?, ?, ?)", (left_task_to_uuid[task_id], right_task_to_uuid[task_id], "joined by importer"))
 
 
 def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflow:
