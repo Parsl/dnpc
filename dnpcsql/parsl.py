@@ -296,6 +296,9 @@ def bind_workflow_account_tasks(*, cursor, left: ImportedWorkflow, right: Import
 
 def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflow:
 
+        task_to_uuid: Dict[int, str]
+        task_to_uuid = {}
+
         task_try_to_uuid: Dict[Tuple[int, int], str]
         task_try_to_uuid = {}
 
@@ -436,12 +439,26 @@ def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflo
             for (task_try_id, wqe_id) in task_try_to_wqe.items():
                 print(f"pairing task_try_id {task_try_id} to Work Queue Executor task id {wqe_id}")
 
+                (task_id, _) = task_try_id
+                task_span_uuid = local_key_to_span_uuid(
+                            cursor = cursor,
+                            local_key = task_id,
+                            namespace = task_to_uuid,
+                            span_type = 'parsl.rundir.task',
+                            description = "Parsl task from rundir import")
+
                 try_span_uuid = local_key_to_span_uuid(
                             cursor = cursor,
                             local_key = task_try_id,
                             namespace = task_try_to_uuid,
                             span_type = 'parsl.rundir.try',
                             description = "Parsl try from rundir import")
+
+                # TODO: here and when creating subspans elsewhere: this doesn't need to be done repeatedly
+                # perhaps could happen as part of the local_to_span_uuid call? (passing in parent span?)
+                # which wouldn't cover all cases, but would cover some?
+                # or a helper which de-dupes.
+                cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (task_span_uuid, try_span_uuid, "rundir task try bind"))
 
                 wqe_id = task_try_to_wqe[task_try_id]
                 wqe_task_span_uuid = wqe_task_to_uuid[wqe_id]
@@ -536,18 +553,18 @@ def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflo
 
         dnpc_db.commit()
 
-        # TODO: define workflow_task_to_uuid above
-        workflow_task_to_uuid = {}
 
         w = ImportedWorkflow(run_id = run_id,
                              workflow_span_uuid = workflow_span_uuid,
-                             task_to_uuid = workflow_task_to_uuid,
+                             task_to_uuid = task_to_uuid,
                              task_try_to_uuid = task_try_to_uuid)
 
         print("Binding tracing and rundir tasks")
         tw = bind_workflow_account_tasks(cursor=cursor,
                                          left=t, 
                                          right=w)
+
+        return tw
 
 def import_parsl_tracing(*, cursor, rundir: str) -> ImportedWorkflow:
     # Now import pickled event stats from parsl_tracing.pickle which is
