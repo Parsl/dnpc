@@ -10,7 +10,8 @@ import dnpcsql.workqueue
 from dnpcsql.htex import import_htex
 from dnpcsql.importerlib import local_key_to_span_uuid, logfile_time_to_unix, store_event
 
-from typing import Dict, Tuple, TypeVar
+from dataclasses import dataclass
+from typing import Dict, List, Tuple, TypeVar
 
 # There are multiple parsl data sources.
 # The big ones are:
@@ -38,8 +39,10 @@ from typing import Dict, Tuple, TypeVar
 # multiple DFKs in a single parsl.log? which is actually
 # perhaps an LSST/DESC requirement)
 
-def import_rundir_root(db: sqlite3.Connection, runinfo: str):
+def import_rundir_root(*, db: sqlite3.Connection, runinfo: str):
     print("importing from parsl")
+
+    cursor = db.cursor()
 
     # in one rundir root, workflow information exists in two
     # places: inside the root monitoring.db, and in individual
@@ -47,11 +50,37 @@ def import_rundir_root(db: sqlite3.Connection, runinfo: str):
 
     # this can import a hierarchy of workflows/tasks/blocks/etc
     # if it exists
-    import_monitoring_db(db, f"{runinfo}/monitoring.db")
+    monitoring_imports = import_monitoring_db(db, cursor, f"{runinfo}/monitoring.db")
     # TODO: this should return a dict of workflow runid uuids
     #        to data useful for facet joining
     
     # separately, could import each rundir/NNN directory...
+
+    rundir_imports: List[ImportedWorkflow]
+    rundir_imports = []
+    for d in os.listdir(runinfo):
+        run_path = f"{runinfo}/{d}"
+        if os.path.isdir(run_path):
+            print(f"Processing rundir: {run_path}")
+            res = import_individual_rundir(dnpc_db=db, cursor=cursor, rundir=run_path)
+            rundir_imports.append(res)
+
+    rundir_run_ids = set([x.run_id for x in rundir_imports])
+    monitoring_run_ids = set([x.run_id for x in monitoring_imports])
+
+    print(f"rundir run ids: {rundir_run_ids}")
+    print(f"monitoring run ids: {monitoring_run_ids}")
+    overlapping_run_ids = rundir_run_ids.intersection(monitoring_run_ids)
+
+    print(f"Overlapping run ids: {overlapping_run_ids}")
+
+    for run_id in overlapping_run_ids:
+        print(f"Binding monitoring and rundir spans for run id {run_id}")
+        monitoring_task_to_uuid = [x.task_to_uuid for x in monitoring_imports if x.run_id == run_id][0]
+        rundir_task_to_uuid = [x.task_to_uuid for x in rundir_imports if x.run_id == run_id][0]
+        bind_monitoring_tracing_tasks(cursor=cursor,
+                                      monitoring_task_to_uuid=monitoring_task_to_uuid, 
+                                      tracing_task_to_uuid=rundir_task_to_uuid)
 
     # and then, for workflows which we know to be the same,
     # create facets at each level for every span type that
@@ -63,20 +92,29 @@ def import_rundir_root(db: sqlite3.Connection, runinfo: str):
 
     print("done importing from parsl")
 
-def import_monitoring_db(dnpc_db, monitoring_db_name):
+@dataclass
+class ImportedWorkflow:
+    run_id: str
+    workflow_span_uuid: str
+    task_to_uuid: Dict[int, str]
+    task_try_to_uuid: Dict[Tuple[int, int], str]
+
+def import_monitoring_db(dnpc_db, dnpc_cursor, monitoring_db_name) -> List[ImportedWorkflow]:
 
     print(f"importing from monitoring db: {monitoring_db_name}")
 
     if not os.path.exists(monitoring_db_name):
         print("monitoring.db does not exist - skipping monitoring.db import")
-        return
+        return []
+ 
+    imported_workflows: List[ImportedWorkflow]
+    imported_workflows = []
 
     monitoring_db = sqlite3.connect(monitoring_db_name,
                                     detect_types=sqlite3.PARSE_DECLTYPES |
                                     sqlite3.PARSE_COLNAMES)
 
     monitoring_cursor = monitoring_db.cursor()
-    dnpc_cursor = dnpc_db.cursor()
 
     rows = list(monitoring_cursor.execute("SELECT run_id, time_began, time_completed FROM workflow"))
 
@@ -198,22 +236,14 @@ def import_monitoring_db(dnpc_db, monitoring_db_name):
 
         print(f"(task,try)->uuid mappings are: {task_try_to_uuid}")
 
-        # now we've imported a workflow from the monitoring DB
-        # is there related stuff to import?
-
-        rows = list(monitoring_cursor.execute("SELECT rundir FROM workflow WHERE run_id == ?", (run_id,)))
-        assert len(rows) == 1
-
-        rundir = rows[0][0]
-
-
-        tracing_task_to_uuid = import_individual_rundir(dnpc_db=dnpc_db, cursor=dnpc_cursor, rundir=rundir, task_try_to_uuid=task_try_to_uuid)
-
-        bind_monitoring_tracing_tasks(cursor=dnpc_cursor,
-                                      monitoring_task_to_uuid=monitoring_task_to_uuid, 
-                                      tracing_task_to_uuid=tracing_task_to_uuid)
-
         dnpc_db.commit()
+
+        imported_workflows.append(ImportedWorkflow(run_id = run_id,
+                                                   workflow_span_uuid = workflow_span_uuid,
+                                                   task_to_uuid = monitoring_task_to_uuid,
+                                                   task_try_to_uuid = task_try_to_uuid))
+
+    return imported_workflows
 
 def bind_monitoring_tracing_tasks(*, cursor, monitoring_task_to_uuid, tracing_task_to_uuid):
         # now tie together facets of the same entity from tracing and monitoring:
@@ -237,7 +267,39 @@ def bind_monitoring_tracing_tasks(*, cursor, monitoring_task_to_uuid, tracing_ta
                 cursor.execute("INSERT INTO facet (left_uuid, right_uuid, note) VALUES (?, ?, ?)", (tracing_task_to_uuid[task_id], monitoring_task_to_uuid[task_id], "joined by importer"))
 
 
-def import_individual_rundir(*, dnpc_db, cursor, task_try_to_uuid: Dict[Tuple[int, int], str], rundir: str) -> Dict[str, str]:
+def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflow:
+
+        task_try_to_uuid: Dict[Tuple[int, int], str]
+        task_try_to_uuid = {}
+
+        parsl_log_filename = f"{rundir}/parsl.log"
+
+        # look for a run id UUID, and check there is only one,
+        # because parsl.log can contain multiple workflows,
+        # without disambiguating tasks/tries/blocks/... with the
+        # same sequential ID.
+        # 1680018839.952707 2023-03-28 08:53:59 MainProcess-60832 MainThread-23046009736064 parsl.dataflow.dflow:121 __init__ INFO: Run id is: 88f840fd-dc4a-45e4-9956-2ef5d4aad63a
+        re_run_id = re.compile('.* Run id is: ([^ ]*)\n$')
+
+        potential_run_ids = []
+        with open(parsl_log_filename, "r") as parsl_log:
+            for parsl_log_line in parsl_log:
+                m = re_run_id.match(parsl_log_line)
+                if m:
+                    potential_run_ids.append(m[1])
+        assert len(potential_run_ids) == 1, "parsl.log must contain exactly one run ID"
+        run_id = potential_run_ids[0]
+        print(f"parsl.log run ID is {run_id}")
+
+        # this doesn't need to live in any parent namespace, but local_key_to_span_uuid
+        # would like a namespace for it...
+        workflow_namespace = {} 
+        workflow_span_uuid = local_key_to_span_uuid(
+                cursor = cursor,
+                local_key = run_id,
+                namespace = workflow_namespace,
+                span_type = 'parsl.rundir.workflow',
+                description = "Workflow from parsl rundir")
 
         re_parsl_log_bind_task = re.compile('.* Parsl task (.*) try (.*) launched on executor (.*) with executor id (.*)')
 
@@ -285,7 +347,6 @@ def import_individual_rundir(*, dnpc_db, cursor, task_try_to_uuid: Dict[Tuple[in
             task_try_to_wqe = {}
             wqe_to_wq = {}
             wqe_task_to_uuid: Dict[str, str] = {}
-            parsl_log_filename = f"{rundir}/parsl.log"
             with open(parsl_log_filename, "r") as parsl_log:
                 for parsl_log_line in parsl_log:
 
@@ -321,7 +382,7 @@ def import_individual_rundir(*, dnpc_db, cursor, task_try_to_uuid: Dict[Tuple[in
                     if m:
                         e_time = float(m[1])
                         wqe_id = m[2]
-                        print("wq executor level event for wqe id {wqe_id}")
+                        print(f"wq executor level event for wqe id {wqe_id}")
                         wqe_span_uuid = local_key_to_span_uuid(
                             cursor = cursor,
                             local_key = wqe_id,
@@ -347,7 +408,14 @@ def import_individual_rundir(*, dnpc_db, cursor, task_try_to_uuid: Dict[Tuple[in
 
             for (task_try_id, wqe_id) in task_try_to_wqe.items():
                 print(f"pairing task_try_id {task_try_id} to Work Queue Executor task id {wqe_id}")
-                try_span_uuid = task_try_to_uuid[task_try_id]
+
+                try_span_uuid = local_key_to_span_uuid(
+                            cursor = cursor,
+                            local_key = task_try_id,
+                            namespace = task_try_to_uuid,
+                            span_type = 'parsl.rundir.try',
+                            description = "Parsl try from rundir import")
+
                 wqe_id = task_try_to_wqe[task_try_id]
                 wqe_task_span_uuid = wqe_task_to_uuid[wqe_id]
                 cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (try_span_uuid, wqe_task_span_uuid, "parsl.executors.wq.task"))
@@ -375,7 +443,7 @@ def import_individual_rundir(*, dnpc_db, cursor, task_try_to_uuid: Dict[Tuple[in
                     print("WQ task log file exists")
 
                     wqe_task_log_span_uuid = str(uuid.uuid4())
-                    cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (wqe_task_log_span_uuid, 'parsl.wqexecutor.remote', 'parsl+wq executor'))
+                    cursor.execute("INSERT INTO span (uuid, type, note) VALUES (?, ?, ?)", (wqe_task_log_span_uuid, 'parsl.executors.workqueue.executor_task.remote', 'parsl+wq executor'))
 
                     with open(function_log_filename, "r") as f:
                       for log_line in f.readlines():
@@ -416,7 +484,6 @@ def import_individual_rundir(*, dnpc_db, cursor, task_try_to_uuid: Dict[Tuple[in
         # try ID", but WQ has an extra layer of IDs beyond the executor
         # task ID that htex does not.
 
-        parsl_log_filename = f"{rundir}/parsl.log"
         with open(parsl_log_filename, "r") as parsl_log:
             for parsl_log_line in parsl_log:
                 m = re_parsl_log_bind_task.match(parsl_log_line)
@@ -430,15 +497,24 @@ def import_individual_rundir(*, dnpc_db, cursor, task_try_to_uuid: Dict[Tuple[in
 
         dnpc_db.commit()
 
+        # nothing above has anything to do with tasks, only with tries
+        # so for now can get away with using the tracing_task_to_uuid
+        # namespace as the only thing we're returning for task_to_uuid.
+        # TODO: later, I'd like to match up more things from parsl.tracing,
+        # not only tasks (most specifically tries)
         tracing_task_to_uuid = import_parsl_tracing(
             cursor = cursor,
             rundir = rundir)
+
         dnpc_db.commit()
 
-        return tracing_task_to_uuid
+        return ImportedWorkflow(run_id = run_id,
+                                workflow_span_uuid = workflow_span_uuid,
+                                task_to_uuid = tracing_task_to_uuid,
+                                task_try_to_uuid = task_try_to_uuid)
 
 
-def import_parsl_tracing(*, cursor, rundir: str):
+def import_parsl_tracing(*, cursor, rundir: str) -> Dict[int, str]:
     # Now import pickled event stats from parsl_tracing.pickle which is
     # a DESC-branch specific development.
     # Right now there isn't enough info to tie such a pickle file into
@@ -447,6 +523,13 @@ def import_parsl_tracing(*, cursor, rundir: str):
     # of parsl code not being aware of how it is associated with a
     # particular DFK.
     # so this code will have to make some assumptions.
+
+    # TODO: this code returns details about tasks as far as the
+    # tracing code is concerned ... but there are also tries in there
+    # which should be tied in to tries in other representations
+    # - so maybe tracing should return an ImportedWorkflow and be
+    # joined in, in the rundir code (or above) in the same way as I
+    # was intending to deep-join rundir and monitoring workflows?
 
     tracing_task_to_uuid = {}
 
@@ -480,14 +563,14 @@ def import_parsl_tracing(*, cursor, rundir: str):
                 span_type = "parsl.tracing." + span_type,
                 description = "imported from parsl_tracing")
 
-            # can this be inferred later on in a binding stage
+            # TODO: can this be inferred later on in a binding stage
             # because the keys of tracing_span_uuids already
             # contain this information? it would split more nicely along
             # the importer A / importer B / binder A<->B modularisation
             # idea?
             if span_type == "TASK":
                 tracing_task_id = span_id
-                print(f"Found tracing TASK with ID {tracing_task_id}")
+                # print(f"Found tracing TASK with ID {tracing_task_id}")
                 tracing_task_to_uuid[tracing_task_id] = span_uuid
 
             store_event(cursor=cursor,
