@@ -4,6 +4,7 @@
 
 import itertools
 import sqlite3
+import sys
 
 from typing import Any, List, Dict
 
@@ -11,7 +12,14 @@ import dnpcsql.queries as queries
 
 if __name__ == "__main__":
 
-    query = queries.events_for_root_span_type("parsl.monitoring.task")
+    print(f"len argv = {len(sys.argv)},  argv = {sys.argv}")
+    if len(sys.argv) == 2:
+        root_span_type = sys.argv[1]
+    else:
+        root_span_type = "parsl.monitoring.task"
+
+    print(f"Looking for events rooted in span type {root_span_type}")
+    query = queries.events_for_root_span_type(root_span_type)
 
     db_name = "dnpc.sqlite3"
     db = sqlite3.connect(db_name,
