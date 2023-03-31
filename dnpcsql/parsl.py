@@ -292,7 +292,11 @@ def bind_workflow_account_tasks(*, cursor, left: ImportedWorkflow, right: Import
         else:
             raise ValueError("ImportedWorkflows had different run_ids")
 
-        return ImportedWorkflow(run_id = run_id, workflow_span_uuid = "", task_to_uuid = combined_task_to_uuid, task_try_to_uuid = {})
+        # this code assumes there will always be a workflow span in an ImportedWorkflow
+        # which right now is kinda suspicious wrt parsl.tracing
+        cursor.execute("INSERT INTO facet (left_uuid, right_uuid, note) VALUES (?, ?, ?)", (left.workflow_span_uuid, right.workflow_span_uuid, "joined by importer"))
+
+        return ImportedWorkflow(run_id = run_id, workflow_span_uuid = left.workflow_span_uuid, task_to_uuid = combined_task_to_uuid, task_try_to_uuid = {})
 
 def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflow:
 
