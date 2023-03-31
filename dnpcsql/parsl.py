@@ -11,7 +11,7 @@ from dnpcsql.htex import import_htex
 from dnpcsql.importerlib import local_key_to_span_uuid, logfile_time_to_unix, store_event
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar
 
 # There are multiple parsl data sources.
 # The big ones are:
@@ -76,11 +76,11 @@ def import_rundir_root(*, db: sqlite3.Connection, runinfo: str):
 
     for run_id in overlapping_run_ids:
         print(f"Binding monitoring and rundir spans for run id {run_id}")
-        monitoring_task_to_uuid = [x.task_to_uuid for x in monitoring_imports if x.run_id == run_id][0]
-        rundir_task_to_uuid = [x.task_to_uuid for x in rundir_imports if x.run_id == run_id][0]
+        monitoring_wf = [x for x in monitoring_imports if x.run_id == run_id][0]
+        rundir_wf = [x for x in rundir_imports if x.run_id == run_id][0]
         bind_workflow_account_tasks(cursor=cursor,
-                                    left_task_to_uuid=monitoring_task_to_uuid, 
-                                    right_task_to_uuid=rundir_task_to_uuid)
+                                    left=monitoring_wf, 
+                                    right=rundir_wf)
 
     # and then, for workflows which we know to be the same,
     # create facets at each level for every span type that
@@ -94,7 +94,7 @@ def import_rundir_root(*, db: sqlite3.Connection, runinfo: str):
 
 @dataclass
 class ImportedWorkflow:
-    run_id: str
+    run_id: Optional[str]
     workflow_span_uuid: str
     task_to_uuid: Dict[int, str]
     task_try_to_uuid: Dict[Tuple[int, int], str]
@@ -245,7 +245,7 @@ def import_monitoring_db(dnpc_db, dnpc_cursor, monitoring_db_name) -> List[Impor
 
     return imported_workflows
 
-def bind_workflow_account_tasks(*, cursor, left_task_to_uuid, right_task_to_uuid):
+def bind_workflow_account_tasks(*, cursor, left: ImportedWorkflow, right: ImportedWorkflow) -> ImportedWorkflow:
         # now tie together facets of the same entity from tracing and monitoring:
         # tasks
         # tries
@@ -259,13 +259,40 @@ def bind_workflow_account_tasks(*, cursor, left_task_to_uuid, right_task_to_uuid
         # could make the entity links (i.e. the DB would already contain the
         # relevant data in a different form?)
 
+        left_task_to_uuid = left.task_to_uuid
+        right_task_to_uuid = right.task_to_uuid
+
         known_task_ids = set(list(left_task_to_uuid.keys()) + list(right_task_to_uuid.keys()))
+        combined_task_to_uuid = {}
         print(f"There are {len(known_task_ids)} known tasks, between two workflow accounts") 
         for task_id in known_task_ids:
             if task_id in left_task_to_uuid and task_id in right_task_to_uuid:
                 print(f"joining spans for task {task_id}")
                 cursor.execute("INSERT INTO facet (left_uuid, right_uuid, note) VALUES (?, ?, ?)", (left_task_to_uuid[task_id], right_task_to_uuid[task_id], "joined by importer"))
+                combined_task_to_uuid[task_id] = left_task_to_uuid[task_id]
+            elif task_id in left_task_to_uuid and task_id not in right_task_to_uuid:
+                print(f"keeping left span for task {task_id}")
+                combined_task_to_uuid[task_id] = left_task_to_uuid[task_id]
+            elif task_id not in left_task_to_uuid and task_id in right_task_to_uuid:
+                print(f"keeping right span for task {task_id}")
+                combined_task_to_uuid[task_id] = right_task_to_uuid[task_id]
+            else:
+                # this path should never be reached, because the above three cases
+                # should cover all cases
+                raise RuntimeError("Unexpected code path")
 
+        if left.run_id is None and right.run_id is not None:
+            run_id = right.run_id
+        elif left.run_id is not None and right.run_id is None:
+            run_id = left.run_id
+        elif left.run_id is None and right.run_id is None:
+            run_id = None
+        elif left.run_id is not None and left.run_id == right.run_id:
+            run_id = left.run_id
+        else:
+            raise ValueError("ImportedWorkflows had different run_ids")
+
+        return ImportedWorkflow(run_id = run_id, workflow_span_uuid = "", task_to_uuid = combined_task_to_uuid, task_try_to_uuid = {})
 
 def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflow:
 
@@ -502,19 +529,27 @@ def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflo
         # namespace as the only thing we're returning for task_to_uuid.
         # TODO: later, I'd like to match up more things from parsl.tracing,
         # not only tasks (most specifically tries)
-        tracing_task_to_uuid = import_parsl_tracing(
+        t: ImportedWorkflow
+        t = import_parsl_tracing(
             cursor = cursor,
             rundir = rundir)
 
         dnpc_db.commit()
 
-        return ImportedWorkflow(run_id = run_id,
-                                workflow_span_uuid = workflow_span_uuid,
-                                task_to_uuid = tracing_task_to_uuid,
-                                task_try_to_uuid = task_try_to_uuid)
+        # TODO: define workflow_task_to_uuid above
+        workflow_task_to_uuid = {}
 
+        w = ImportedWorkflow(run_id = run_id,
+                             workflow_span_uuid = workflow_span_uuid,
+                             task_to_uuid = workflow_task_to_uuid,
+                             task_try_to_uuid = task_try_to_uuid)
 
-def import_parsl_tracing(*, cursor, rundir: str) -> Dict[int, str]:
+        print("Binding tracing and rundir tasks")
+        tw = bind_workflow_account_tasks(cursor=cursor,
+                                         left=t, 
+                                         right=w)
+
+def import_parsl_tracing(*, cursor, rundir: str) -> ImportedWorkflow:
     # Now import pickled event stats from parsl_tracing.pickle which is
     # a DESC-branch specific development.
     # Right now there isn't enough info to tie such a pickle file into
@@ -531,8 +566,23 @@ def import_parsl_tracing(*, cursor, rundir: str) -> Dict[int, str]:
     # joined in, in the rundir code (or above) in the same way as I
     # was intending to deep-join rundir and monitoring workflows?
 
+    workflow_to_uuid = {}
+
+    # TODO: this is a bit weird because there is no workflow level span in the trace...
+    # but maybe there should be? or maybe it's fine to infer it here.
+    # or maybe we just don't need one at all, because the tracing system doesn't
+    # represent one at the moment?
+    workflow_span_uuid = local_key_to_span_uuid(cursor = cursor,
+                                                local_key = None, # no run id, but that's not necessary here for internal use
+                                                namespace = workflow_to_uuid,
+                                                span_type = 'parsl.tracing.workflow',
+                                                description = "Parsl workflow from tracing import")
+
     tracing_task_to_uuid = {}
 
+    # TODO: this decision should be made in rundir importer, and
+    # this importer should take a whole path to the pickle file,
+    # so that it can be used outside of a rundir.
     parsl_tracing_filename=f"{rundir}/parsl_tracing.pickle"
     if os.path.exists(parsl_tracing_filename):
         with open(parsl_tracing_filename, "rb") as f:
@@ -569,6 +619,9 @@ def import_parsl_tracing(*, cursor, rundir: str) -> Dict[int, str]:
             # the importer A / importer B / binder A<->B modularisation
             # idea?
             if span_type == "TASK":
+                # TODO: if we're putting in an implicit workflow span
+                # (which I'm unsure about)
+                # then this task should be bound into the workflow span.
                 tracing_task_id = span_id
                 # print(f"Found tracing TASK with ID {tracing_task_id}")
                 tracing_task_to_uuid[tracing_task_id] = span_uuid
@@ -605,7 +658,8 @@ def import_parsl_tracing(*, cursor, rundir: str) -> Dict[int, str]:
 
             cursor.execute("INSERT INTO subspan (superspan_uuid, subspan_uuid, key) VALUES (?, ?, ?)", (super_uuid, sub_uuid, str((sub_type, sub_id))))
 
-    return tracing_task_to_uuid
+    # TODO: implement task_try_to_uuid
+    return ImportedWorkflow(run_id = None, workflow_span_uuid = workflow_span_uuid, task_to_uuid = tracing_task_to_uuid, task_try_to_uuid = {})
 
 def db_time_to_unix(s: str):
     return datetime.datetime.fromisoformat(s).timestamp()
