@@ -4,6 +4,8 @@ import sqlite3
 import sys
 import dnpcsql.queries as queries
 
+from typing import Dict, List, Tuple
+
 if __name__ == "__main__":
 
     if len(sys.argv) == 2:
@@ -29,11 +31,11 @@ if __name__ == "__main__":
     # get each task's flattened event stream, grouped by task span
 
     rows.sort(key=lambda r: r[0])
-    groups = itertools.groupby(rows, lambda r: r[0])
+    groups_ = itertools.groupby(rows, lambda r: r[0])
 
     # Concretise the two levels of iterators returned by itertools into
     # list objects.
-    groups = [(list(g)) for (_uuid, g) in groups]
+    groups = [(list(g)) for (_uuid, g) in groups_]
 
     # check we end up with the same number of events after grouping...
     # because i am seeing weird behaviour:
@@ -102,9 +104,9 @@ if __name__ == "__main__":
     # sort counter modifiers by time and split/group by event type
 
     events.sort(key=lambda r: r[0])
-    grouped_by_event_name = itertools.groupby(events, lambda r: r[0])
+    grouped_by_event_name_ = itertools.groupby(events, lambda r: r[0])
 
-    grouped_by_event_name = [(event_name, list(g)) for (event_name, g) in grouped_by_event_name]
+    grouped_by_event_name = [(event_name, list(g)) for (event_name, g) in grouped_by_event_name_]
 
     print(f"There are {len(grouped_by_event_name)} event groups.")
 
@@ -112,7 +114,10 @@ if __name__ == "__main__":
 
     unified_x_axis_values = set()
 
+    accumulated_changes_by_event_name: Dict[str, List[Tuple[float, int]]]
     accumulated_changes_by_event_name = {}
+
+    accumulated_changes_by_event_name_total = {}
 
     for (event_name, counter_events) in grouped_by_event_name:
         print(f"{event_name} has {len(counter_events)} counter-events")
@@ -158,7 +163,7 @@ if __name__ == "__main__":
         for v in new_accumulated_changes:
             assert isinstance(v, int)
 
-        accumulated_changes_by_event_name[event_name] = new_accumulated_changes
+        accumulated_changes_by_event_name_total[event_name] = new_accumulated_changes
 
         print(f"Now have {len(new_accumulated_changes)} for this event name")
 
@@ -171,7 +176,7 @@ if __name__ == "__main__":
     fig = plt.figure(figsize=(16, 10))
     ax = fig.add_subplot(1, 1, 1)
 
-    ax.stackplot(sorted_unified_x_axis_values, list(accumulated_changes_by_event_name.values()), labels=list(accumulated_changes_by_event_name.keys()))   # , labels=labels, colors=colors, baseline=baseline)
+    ax.stackplot(sorted_unified_x_axis_values, list(accumulated_changes_by_event_name_total.values()), labels=list(accumulated_changes_by_event_name_total.keys()))   # , labels=labels, colors=colors, baseline=baseline)
     ax.legend(loc='upper left', bbox_to_anchor=(1,1))
     plt.title("Root spans in which state over time")
 
