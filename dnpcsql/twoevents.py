@@ -55,7 +55,7 @@ def plot_histo(ydata, output_filename, start_name, end_name):
 
     fig, ax = plt.subplots()
 
-    ax.hist(ydata, bins=100, color="#0000FF")
+    ax.hist(ydata, bins=10, color="#0000FF")
     ax.axvline(ydata.mean(), linestyle='dashed', linewidth=1, label="mean", color = "#009900")
     ax.axvline(np.percentile(ydata, 50), linestyle='dashed', linewidth=1, label="median", color = "#FF00AA")
     ax.axvline(np.percentile(ydata, 95), linestyle='dashed', linewidth=1, label="95%", color = "#AA0000")
