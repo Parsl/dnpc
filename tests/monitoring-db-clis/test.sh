@@ -16,6 +16,8 @@ diff list_event_sequences.out list_event_sequences.out.expected
 
 # check these tools run, but do not check output makes sense
 python3 -m dnpcsql.dag_span_types
+[ -f spandag.png ]
+
 python3 -m dnpcsql.plot_task_durations
 python3 -m dnpcsql.plot_spans_in_each_state
 
