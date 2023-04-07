@@ -327,6 +327,7 @@ def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflo
 
         # this doesn't need to live in any parent namespace, but local_key_to_span_uuid
         # would like a namespace for it...
+        workflow_namespace: Dict[str, str]
         workflow_namespace = {} 
         workflow_span_uuid = local_key_to_span_uuid(
             cursor = cursor,
@@ -571,7 +572,7 @@ def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflo
 
         return tw
 
-def import_parsl_tracing(*, cursor, rundir: str) -> ImportedWorkflow:
+def import_parsl_tracing(*, cursor: sqlite3.Cursor, rundir: str) -> ImportedWorkflow:
     # Now import pickled event stats from parsl_tracing.pickle which is
     # a DESC-branch specific development.
     # Right now there isn't enough info to tie such a pickle file into
@@ -588,6 +589,7 @@ def import_parsl_tracing(*, cursor, rundir: str) -> ImportedWorkflow:
     # joined in, in the rundir code (or above) in the same way as I
     # was intending to deep-join rundir and monitoring workflows?
 
+    workflow_to_uuid: Dict[None, str]
     workflow_to_uuid = {}
 
     # TODO: this is a bit weird because there is no workflow level span in the trace...

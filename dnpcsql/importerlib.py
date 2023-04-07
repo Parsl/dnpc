@@ -1,4 +1,5 @@
 import datetime
+import sqlite3
 import uuid
 
 from typing import Dict, TypeVar
@@ -6,7 +7,7 @@ from typing import Dict, TypeVar
 X = TypeVar('X')
 
 def local_key_to_span_uuid(*,
-                           cursor,
+                           cursor: sqlite3.Cursor,
                            local_key: X,
                            namespace: Dict[X, str],
                            span_type: str,
