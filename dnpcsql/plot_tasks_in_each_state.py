@@ -1,14 +1,20 @@
 import itertools
 import matplotlib.pyplot as plt
 import sqlite3
+import sys
 import dnpcsql.queries as queries
-
 
 if __name__ == "__main__":
 
+    if len(sys.argv) == 2:
+        root_span_type = sys.argv[1]
+    else:
+        root_span_type = "parsl.monitoring.task"
+    print(f"Looking for events rooted in span type {root_span_type}")
+
     # make a plot over time of how many tasks are in each state
 
-    query = queries.events_for_root_span_type("parsl.monitoring.task")
+    query = queries.events_for_root_span_type(root_span_type)
 
     db_name = "dnpc.sqlite3"
     db = sqlite3.connect(db_name,
@@ -77,19 +83,15 @@ if __name__ == "__main__":
             if cut or not started:
                 pass
             elif should_cut and last_event_name:  # no more processing
-                print(f"reducing last event: {last_event_name}")
                 events.append( (last_event_name, float(event_time), -1) )
                 cut = True
             elif should_cut:
                 cut = True
             elif last_event_name and last_event_name != event_name:
-                print(f"reducing last event: {last_event_name}")
                 events.append( (last_event_name, float(event_time), -1) )
-                print(f"increasing next event: {event_name}")
                 events.append( (event_name, float(event_time), 1) )
                 last_event_name = event_name
             elif last_event_name is None:
-                print(f"increasing next event: {event_name}")
                 events.append( (event_name, float(event_time), 1) )
                 last_event_name = event_name
             else:  # last_event_name was specified but this is a transition to the same state, so ignore
@@ -115,17 +117,14 @@ if __name__ == "__main__":
     for (event_name, counter_events) in grouped_by_event_name:
         print(f"{event_name} has {len(counter_events)} counter-events")
         counter_events.sort(key=lambda r: r[1])
-        print(counter_events)
         accumulator = 0
         accumulated_changes = []
         for (event_name, event_time, delta) in counter_events:
-            print(f"{event_time}  {delta}")
             accumulator += delta
             accumulated_changes.append( (event_time, accumulator) )
             unified_x_axis_values.add(event_time)
             assert accumulator >= 0, f"Event {event_name} count became negative at {event_time}"
 
-        print(f"For event {event_name}, got accumulator: {accumulated_changes}")
         accumulated_changes_by_event_name[event_name] = accumulated_changes
 
     sorted_unified_x_axis_values = list(unified_x_axis_values)
