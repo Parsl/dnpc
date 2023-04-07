@@ -15,6 +15,7 @@ python3 -m dnpcsql.list_event_sequences > list_event_sequences.out
 diff list_event_sequences.out list_event_sequences.out.expected
 
 # check these tools run, but do not check output makes sense
+sudo apt install -y graphviz
 python3 -m dnpcsql.dag_span_types
 [ -f spandag.png ]
 
