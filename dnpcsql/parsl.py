@@ -132,11 +132,11 @@ def import_monitoring_db(dnpc_db, dnpc_cursor, monitoring_db_name) -> List[Impor
         # hasn't reported any activity for a while)
 
         workflow_span_uuid = local_key_to_span_uuid(
-                cursor = dnpc_cursor,
-                local_key = run_id,
-                namespace = monitoring_workflow_to_uuid,
-                span_type = 'parsl.monitoring.workflow',
-                description = "Workflow from parsl monitoring.db")
+            cursor = dnpc_cursor,
+            local_key = run_id,
+            namespace = monitoring_workflow_to_uuid,
+            span_type = 'parsl.monitoring.workflow',
+            description = "Workflow from parsl monitoring.db")
 
         start_time = db_time_to_unix(row[1])
 
@@ -329,11 +329,11 @@ def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflo
         # would like a namespace for it...
         workflow_namespace = {} 
         workflow_span_uuid = local_key_to_span_uuid(
-                cursor = cursor,
-                local_key = run_id,
-                namespace = workflow_namespace,
-                span_type = 'parsl.rundir.workflow',
-                description = "Workflow from parsl rundir")
+            cursor = cursor,
+            local_key = run_id,
+            namespace = workflow_namespace,
+            span_type = 'parsl.rundir.workflow',
+            description = "Workflow from parsl rundir")
 
         re_parsl_log_bind_task = re.compile('.* Parsl task (.*) try (.*) launched on executor (.*) with executor id (.*)')
 
@@ -445,18 +445,18 @@ def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflo
 
                 (task_id, _) = task_try_id
                 task_span_uuid = local_key_to_span_uuid(
-                            cursor = cursor,
-                            local_key = task_id,
-                            namespace = task_to_uuid,
-                            span_type = 'parsl.rundir.task',
-                            description = "Parsl task from rundir import")
+                    cursor = cursor,
+                    local_key = task_id,
+                    namespace = task_to_uuid,
+                    span_type = 'parsl.rundir.task',
+                    description = "Parsl task from rundir import")
 
                 try_span_uuid = local_key_to_span_uuid(
-                            cursor = cursor,
-                            local_key = task_try_id,
-                            namespace = task_try_to_uuid,
-                            span_type = 'parsl.rundir.try',
-                            description = "Parsl try from rundir import")
+                    cursor = cursor,
+                    local_key = task_try_id,
+                    namespace = task_try_to_uuid,
+                    span_type = 'parsl.rundir.try',
+                    description = "Parsl try from rundir import")
 
                 # TODO: here and when creating subspans elsewhere: this doesn't need to be done repeatedly
                 # perhaps could happen as part of the local_to_span_uuid call? (passing in parent span?)

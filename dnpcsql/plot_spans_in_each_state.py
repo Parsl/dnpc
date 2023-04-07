@@ -83,16 +83,16 @@ if __name__ == "__main__":
             if cut or not started:
                 pass
             elif should_cut and last_event_name:  # no more processing
-                events.append( (last_event_name, float(event_time), -1) )
+                events.append((last_event_name, float(event_time), -1))
                 cut = True
             elif should_cut:
                 cut = True
             elif last_event_name and last_event_name != event_name:
-                events.append( (last_event_name, float(event_time), -1) )
-                events.append( (event_name, float(event_time), 1) )
+                events.append((last_event_name, float(event_time), -1))
+                events.append((event_name, float(event_time), 1))
                 last_event_name = event_name
             elif last_event_name is None:
-                events.append( (event_name, float(event_time), 1) )
+                events.append((event_name, float(event_time), 1))
                 last_event_name = event_name
             else:  # last_event_name was specified but this is a transition to the same state, so ignore
                 pass
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         accumulated_changes = []
         for (event_name, event_time, delta) in counter_events:
             accumulator += delta
-            accumulated_changes.append( (event_time, accumulator) )
+            accumulated_changes.append((event_time, accumulator))
             unified_x_axis_values.add(event_time)
             assert accumulator >= 0, f"Event {event_name} count became negative at {event_time}"
 
@@ -173,7 +173,7 @@ if __name__ == "__main__":
 
     ax.stackplot(sorted_unified_x_axis_values, list(accumulated_changes_by_event_name.values()), labels=list(accumulated_changes_by_event_name.keys()))   # , labels=labels, colors=colors, baseline=baseline)
     ax.legend(loc='upper left', bbox_to_anchor=(1,1))
-    plt.title(f"Root spans in which state over time")
+    plt.title("Root spans in which state over time")
 
     # shrink the plot by 30% to give more room for usually wide labels
     # https://stackoverflow.com/questions/4700614/how-to-put-the-legend-outside-the-plot
