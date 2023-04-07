@@ -7,6 +7,31 @@ Distributed Nested Performance Contexts in SQL
 A toolkit for analysing performance data from various components
 when running large workflows with [Parsl](https://parsl-project.org/)
 
+## Quickstart
+
+```
+pip install .
+
+# Remove existing DB
+$ rm dnpc.sqlite3
+
+# Import a runinfo directory
+$ python3 -m dnpcsql.import_parsl_runinfo ~/parsl/src/parsl/runinfo
+
+# See which span types have been imported
+
+$ python3 -m dnpcsql.list_span_types
+parsl.monitoring.workflow
+parsl.monitoring.task
+parsl.monitoring.try
+workqueue.task
+workqueue.worker
+
+# List most common sequence of events
+$ python3 -m dnpcsql.list_event_sequences
+... verbose output ...
+```
+
 ## Structure
 
 * An SQLite database with a basic schema
@@ -152,50 +177,6 @@ is the optimal place to do it; then plotting happens in Python around matplotlib
 
 See dnpcsql/twoevents.py for an example of this.
 
-## Install
-
-```
-pip3 install .
-```
-
-## Install at NERSC
-
-```
-module load python/3.9-anaconda-2021.11
-conda create --name dnpcsql-analysis python=3.10
-conda activate dnpcsql-analysis
-pip install .
-```
-
-On subsequent uses, only:
-
-```
-module load python3
-conda activate dnpcsql-analysis
-```
-
-## Example usage of commandline tools
-
-```
-# Remove existing DB
-$ rm dnpc.sqlite3
-
-# Import a runinfo directory
-$ python3 -m dnpcsql.import_parsl_runinfo ~/parsl/src/parsl/runinfo
-
-# See which span types have been imported
-
-$ python3 -m dnpcsql.list_span_types
-parsl.monitoring.workflow
-parsl.monitoring.task
-parsl.monitoring.try
-workqueue.task
-workqueue.worker
-
-# List most common sequence of events
-$ python3 -m dnpcsql.list_event_sequences
-... verbose output ...
-```
 
 ## History
 
@@ -236,7 +217,12 @@ side-project)
 * using a richer standardised data model (standard span or event types,
   for example) for all components
 
+* figuring out that your clocks are not synchronised across machines
+
 ## See also
+
+https://docs.google.com/presentation/d/1wW2FLYMTeko1_Qxhx8IB3T3DtXedTb-rT38mrB2qkiw/edit?usp=sharing
+- Presentation to #parsl-hackers slack channel about this project, April 2023
 
 http://netlogger.lbl.gov/ - NetLogger, a very similar project. Especially see
 NetLogger's logging best practices document:
