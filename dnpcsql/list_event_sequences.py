@@ -12,7 +12,6 @@ import dnpcsql.queries as queries
 
 if __name__ == "__main__":
 
-    print(f"len argv = {len(sys.argv)},  argv = {sys.argv}")
     if len(sys.argv) == 2:
         root_span_type = sys.argv[1]
     else:
@@ -38,30 +37,23 @@ if __name__ == "__main__":
     for (root_span_uuid, events_iterator) in groups:
       events = list(events_iterator)
       hash_material = ""
-      print(f"Root span uuid {root_span_uuid}:")
       for e in events:
           event_time=e[1]
           span_type=e[2]
           event_type=e[3]
-          print(f"  {event_time} {span_type}/{event_type}")
           hash_material += f" {span_type} {event_type}"
       h = hash(hash_material)
-      print(f"hash of this sequence: {h}")
       if h not in hash_counts:
           hash_counts[h] = 0
           hash_sequences[h] = []
       hash_counts[h] += 1
       hash_sequences[h].append(events)
-      print("=====")
-    print(f"There were {len(hash_counts)} different orderings of events:")
-    print(hash_counts)
+    print(f"There were {len(hash_counts)} different orderings of events")
 
     most_common_count = max(hash_counts.values())
     print(f"Most common count: {most_common_count}")
 
     most_common_hash = [k for k in hash_counts.keys() if hash_counts[k] == most_common_count][0]
-
-    print(f"Most common hash: {most_common_hash}")
 
     print("Example event sequence in this most common hash:")
 
@@ -77,7 +69,6 @@ if __name__ == "__main__":
       span_type=e[2]
       event_type=e[3]
       event_uuid=e[4]
-      print(f"Template event:  {event_time} {span_type}/{event_type} {event_uuid}")
       template_events.append(0)
 
     for s in hash_sequences[most_common_hash]:

@@ -1,0 +1,12 @@
+Looking for events rooted in span type parsl.monitoring.task
+There were 1 different orderings of events
+Most common count: 50
+Example event sequence in this most common hash:
+Mean times for most common event sequence (cumul, inter-event)
+    0.000000000     0.000000000 parsl.monitoring.task/invoked
+    0.000136347     0.000136347 parsl.monitoring.try/pending
+    0.000889292     0.000752945 parsl.monitoring.try/launched
+    7.165971842     7.165082550 parsl.monitoring.try/running
+    7.186329894     0.020358052 parsl.monitoring.try/running_ended
+    7.489900270     0.303570375 parsl.monitoring.task/returned
+    7.489937954     0.000037684 parsl.monitoring.try/exec_done
