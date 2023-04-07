@@ -30,3 +30,9 @@ jobs:
     - name: flake8
       run: |
         flake8 dnpcsql/
+
+    - name: CLI tests
+      run: |
+        pushd tests/monitoring-db-clis
+        ./test.sh
+        popd
