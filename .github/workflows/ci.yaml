@@ -36,3 +36,6 @@ jobs:
         pushd tests/monitoring-db-clis
         ./test.sh
         popd
+        pushd tests/workqueue
+        ./test.sh
+        popd

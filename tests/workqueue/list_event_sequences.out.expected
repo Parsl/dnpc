@@ -1,0 +1,15 @@
+Looking for events rooted in span type workqueue.task
+There were 1 different orderings of events
+Most common count: 50
+Example event sequence in this most common hash:
+Mean times for most common event sequence (cumul, inter-event)
+    0.000000000     0.000000000 workqueue.task/WAITING
+    6.013215499     6.013215499 workqueue.task/TRANSFER_INPUT
+    6.013254967     0.000039468 workqueue.task/TRANSFER_INPUT
+    6.013286018     0.000031052 workqueue.task/TRANSFER_INPUT
+    6.013421097     0.000135078 workqueue.task/RUNNING
+    6.257038336     0.243617239 workqueue.task/WAITING_RETRIEVAL
+    6.257242856     0.000204520 workqueue.task/TRANSFER_OUTPUT
+    6.257387633     0.000144777 workqueue.task/TRANSFER_OUTPUT
+    6.257451963     0.000064330 workqueue.task/RETRIEVED
+    6.257549005     0.000097041 workqueue.task/DONE
