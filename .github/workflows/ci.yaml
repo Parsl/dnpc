@@ -25,8 +25,8 @@ jobs:
 
     - name: mypy
       run: |
-        mypy dnpcsql/ vedexporter/
+        mypy dnpcsql/
 
     - name: flake8
       run: |
-        flake8 dnpcsql/ vedexporter/
+        flake8 dnpcsql/
