@@ -438,7 +438,7 @@ def import_individual_rundir(*, dnpc_db, cursor, rundir: str) -> ImportedWorkflo
             assert len(task_try_to_wqe) == len(wq_task_to_uuid)
 
             print(f"len wq_task_to_uuid {len(wq_task_to_uuid)}")
-            print(f"len(wqe_task_to_uuid {len(wqe_task_to_uuid)}")
+            print(f"len wqe_task_to_uuid {len(wqe_task_to_uuid)}")
             assert len(wq_task_to_uuid) == len(wqe_task_to_uuid)
 
             for (task_try_id, wqe_id) in task_try_to_wqe.items():
