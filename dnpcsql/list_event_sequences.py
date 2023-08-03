@@ -55,8 +55,6 @@ if __name__ == "__main__":
 
     most_common_hash = [k for k in hash_counts.keys() if hash_counts[k] == most_common_count][0]
 
-    print("Example event sequence in this most common hash:")
-
     assert len(hash_sequences[most_common_hash]) == most_common_count
     example_events = hash_sequences[most_common_hash][0]
 
