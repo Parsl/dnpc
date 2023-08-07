@@ -17,6 +17,7 @@ import dnpcsql.queries as queries
 class EventStats:
     cumulative: float = 0
     minimum: float = math.inf
+    maximum: float = -math.inf
 
 if __name__ == "__main__":
 
@@ -87,6 +88,7 @@ if __name__ == "__main__":
         time_since_last = event_time - last_time
         template_events[n].cumulative += time_since_last
         template_events[n].minimum = min(time_since_last, template_events[n].minimum)
+        template_events[n].maximum = max(time_since_last, template_events[n].maximum)
         last_time = event_time
         n += 1
 
@@ -99,13 +101,15 @@ if __name__ == "__main__":
       event_type=e[3]
       inter_time = template_events[n].cumulative / most_common_count
       minimum_time = template_events[n].minimum
+      maximum_time = template_events[n].maximum
       c += inter_time
 
       inter_time_formatted = "{:15.9f}".format(inter_time)
       cumul_time_formatted = "{:15.9f}".format(c)
       minimum_time_formatted = "{:15.9f}".format(minimum_time)
+      maximum_time_formatted = "{:15.9f}".format(maximum_time)
 
-      print(f"{cumul_time_formatted} {inter_time_formatted} {minimum_time_formatted} {span_type}/{event_type}")
+      print(f"{cumul_time_formatted} {inter_time_formatted} {minimum_time_formatted}-{maximum_time_formatted} {span_type}/{event_type}")
       n += 1
 
 
