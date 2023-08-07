@@ -3,12 +3,20 @@
 # Maybe list them in mean-order-since-start-of-task?
 
 import itertools
+import math
 import sqlite3
 import sys
 
+from dataclasses import dataclass
 from typing import Any, List, Dict
 
 import dnpcsql.queries as queries
+
+
+@dataclass
+class EventStats:
+    cumulative: float = 0
+    minimum: float = math.inf
 
 if __name__ == "__main__":
 
@@ -67,7 +75,7 @@ if __name__ == "__main__":
       span_type=e[2]
       event_type=e[3]
       event_uuid=e[4]
-      template_events.append(0)
+      template_events.append(EventStats())
 
     for s in hash_sequences[most_common_hash]:
       last_time = float(s[0][1])
@@ -77,7 +85,8 @@ if __name__ == "__main__":
             raise RuntimeError(f"Implementation error: this event is not in template sequence: template event type at this position: {example_events[n][3]}, this event type {e[3]}")
         event_time = float(e[1])
         time_since_last = event_time - last_time
-        template_events[n] += time_since_last
+        template_events[n].cumulative += time_since_last
+        template_events[n].minimum = min(time_since_last, template_events[n].minimum)
         last_time = event_time
         n += 1
 
@@ -88,13 +97,15 @@ if __name__ == "__main__":
       event_time=e[1]
       span_type=e[2]
       event_type=e[3]
-      inter_time = template_events[n] / most_common_count
+      inter_time = template_events[n].cumulative / most_common_count
+      minimum_time = template_events[n].minimum
       c += inter_time
 
       inter_time_formatted = "{:15.9f}".format(inter_time)
       cumul_time_formatted = "{:15.9f}".format(c)
+      minimum_time_formatted = "{:15.9f}".format(minimum_time)
 
-      print(f"{cumul_time_formatted} {inter_time_formatted} {span_type}/{event_type}")
+      print(f"{cumul_time_formatted} {inter_time_formatted} {minimum_time_formatted} {span_type}/{event_type}")
       n += 1
 
 
